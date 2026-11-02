@@ -339,6 +339,7 @@ CREATE TABLE tb_agendamentos_coletas (
     data_inicio             TIMESTAMPTZ  NOT NULL,
     data_fim                TIMESTAMPTZ,
     possui_recorrencia      BOOLEAN      NOT NULL DEFAULT FALSE,
+    origem_solicitacao       VARCHAR(20) NOT NULL,
     CONSTRAINT fk_agendamentos_coletas_condominio_id FOREIGN KEY (condominio_id) REFERENCES tb_condominios (id_condominio),
     CONSTRAINT fk_agendamentos_coletas_cooperativa_id FOREIGN KEY (cooperativa_id) REFERENCES tb_cooperativas (id_cooperativa),
     CONSTRAINT fk_agendamentos_coletas_status_agendamento_id FOREIGN KEY (status_agendamento_id) REFERENCES tb_lkp_status_agendamentos (id_status),
@@ -2261,3 +2262,31 @@ COMMIT;
 -- ============================================================================
 -- FIM DO SCRIPT (46 tabelas)
 -- ============================================================================
+
+CREATE OR REPLACE FUNCTION fn_usuario_representa_lado(
+    p_usuario_id INTEGER,
+    p_lado VARCHAR,
+    p_condominio_id INTEGER,
+    p_cooperativa_id INTEGER
+)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+AS $$
+    SELECT CASE p_lado
+        WHEN 'CONDOMINIO' THEN EXISTS (
+            SELECT 1
+            FROM tb_condominios c
+            JOIN tb_sindicos s ON s.id_sindico = c.sindico_id
+            WHERE c.id_condominio = p_condominio_id
+              AND s.usuario_id = p_usuario_id
+        )
+        WHEN 'COOPERATIVA' THEN EXISTS (
+            SELECT 1
+            FROM tb_cooperativas coop
+            WHERE coop.id_cooperativa = p_cooperativa_id
+              AND coop.usuario_id = p_usuario_id
+        )
+        ELSE FALSE
+    END;
+$$;
