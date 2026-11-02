@@ -1,9 +1,5 @@
 package dad.entrypoint.mapper;
 
-import java.util.Locale;
-
-import org.springframework.stereotype.Component;
-
 import dad.core.domain.CriarUsuario;
 import dad.core.domain.EditarUsuario;
 import dad.core.domain.Endereco;
@@ -15,12 +11,13 @@ import dad.entrypoint.dto.request.UsuarioEditarRequest;
 import dad.entrypoint.dto.response.EnderecoResponse;
 import dad.entrypoint.dto.response.PaginaResponse;
 import dad.entrypoint.dto.response.UsuarioResponse;
+import java.util.Locale;
+import org.springframework.stereotype.Component;
 
 @Component
 public class UsuarioMapper {
 
-  public CriarUsuario toDomain(
-      UsuarioCriarRequest request) {
+  public CriarUsuario toDomain(UsuarioCriarRequest request) {
     return new CriarUsuario(
         request.nome().trim(),
         normalizarEmail(request.email()),
@@ -33,8 +30,7 @@ public class UsuarioMapper {
         request.condominioId());
   }
 
-  public EditarUsuario toDomain(
-      UsuarioEditarRequest request) {
+  public EditarUsuario toDomain(UsuarioEditarRequest request) {
     return new EditarUsuario(
         request.nome().trim(),
         normalizarEmail(request.email()),
@@ -67,21 +63,16 @@ public class UsuarioMapper {
         usuario.condominioId());
   }
 
-  public PaginaResponse<UsuarioResponse> toResponse(
-      Pagina<Usuario> pagina) {
+  public PaginaResponse<UsuarioResponse> toResponse(Pagina<Usuario> pagina) {
     return new PaginaResponse<>(
-        pagina.itens()
-            .stream()
-            .map(this::toResponse)
-            .toList(),
+        pagina.itens().stream().map(this::toResponse).toList(),
         pagina.pagina(),
         pagina.tamanho(),
         pagina.totalItens(),
         pagina.totalPaginas());
   }
 
-  private Endereco toDomain(
-      EnderecoRequest request) {
+  private Endereco toDomain(EnderecoRequest request) {
     return new Endereco(
         request.cep(),
         request.uf(),
@@ -96,9 +87,7 @@ public class UsuarioMapper {
   }
 
   private String limpar(String valor) {
-    return valor == null || valor.isBlank()
-        ? null
-        : valor.trim();
+    return valor == null || valor.isBlank() ? null : valor.trim();
   }
 
   private String mascararCpf(String cpf) {

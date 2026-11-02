@@ -1,30 +1,25 @@
 package dad.dataprovider.mapper;
 
-import java.time.OffsetDateTime;
-
-import org.springframework.stereotype.Component;
-
 import dad.core.domain.CriarUsuario;
 import dad.core.domain.EditarUsuario;
 import dad.core.domain.Endereco;
 import dad.core.domain.Usuario;
 import dad.dataprovider.entity.EnderecoEntity;
 import dad.dataprovider.entity.UsuarioEntity;
+import java.time.OffsetDateTime;
+import org.springframework.stereotype.Component;
 
 @Component
 public class UsuarioPersistenceMapper {
 
   public Usuario toDomain(
-      UsuarioEntity entity,
-      EnderecoEntity endereco,
-      String tipo,
-      Integer condominioId) {
+      UsuarioEntity entity, EnderecoEntity endereco, String tipo, Integer condominioId) {
     return new Usuario(
         entity.id,
         entity.nome,
         entity.email,
         entity.tipoUsuarioId,
-        tipo,
+        dad.core.domain.TiposUsuarios.nomeExibicao(tipo),
         entity.ativo,
         entity.dataNascimento,
         entity.cpf,
@@ -34,10 +29,7 @@ public class UsuarioPersistenceMapper {
         condominioId);
   }
 
-  public UsuarioEntity toNovaEntity(
-      CriarUsuario comando,
-      String senhaHash,
-      Integer enderecoId) {
+  public UsuarioEntity toNovaEntity(CriarUsuario comando, String senhaHash, Integer enderecoId) {
     var entity = new UsuarioEntity();
 
     entity.nome = comando.nome();
@@ -54,9 +46,7 @@ public class UsuarioPersistenceMapper {
     return entity;
   }
 
-  public void atualizar(
-      UsuarioEntity entity,
-      EditarUsuario comando) {
+  public void atualizar(UsuarioEntity entity, EditarUsuario comando) {
     entity.nome = comando.nome();
     entity.email = comando.email();
     entity.dataNascimento = comando.dataNascimento();
@@ -65,12 +55,7 @@ public class UsuarioPersistenceMapper {
 
   public Endereco toDomain(EnderecoEntity entity) {
     return new Endereco(
-        entity.cep,
-        entity.uf,
-        entity.cidade,
-        entity.logradouro,
-        entity.numero,
-        entity.complemento);
+        entity.cep, entity.uf, entity.cidade, entity.logradouro, entity.numero, entity.complemento);
   }
 
   public EnderecoEntity toEntity(Endereco endereco) {

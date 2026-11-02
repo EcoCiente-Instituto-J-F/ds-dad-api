@@ -15,15 +15,15 @@ public record DashboardResponse(
     long agendamentos,
     long usuariosCadastradosHoje,
     long postagensHoje,
+    @io.swagger.v3.oas.annotations.media.Schema(
+            description =
+                "Ocorrências previstas para o dia em America/Sao_Paulo, incluindo recorrências. Considera todos os status.")
+        long coletasHoje,
     List<MesResponse> evolucao,
     List<UsuarioRecenteResponse> usuariosRecentes) {
 
   public record MesResponse(
-      String mes,
-      long usuariosNovos,
-      long cooperativasNovas,
-      long postagens) {
-  }
+      String mes, long usuariosNovos, long cooperativasNovas, long postagens) {}
 
   public record UsuarioRecenteResponse(
       Integer id,
@@ -31,6 +31,5 @@ public record DashboardResponse(
       String email,
       String tipo,
       boolean ativo,
-      OffsetDateTime registroEm) {
-  }
+      OffsetDateTime registroEm) {}
 }

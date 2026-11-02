@@ -1,45 +1,32 @@
 package dad.dataprovider.mapper;
 
-import java.time.OffsetDateTime;
-import java.util.List;
-
-import org.springframework.stereotype.Component;
-
 import dad.core.domain.AlternativaQuiz;
 import dad.core.domain.PerguntaQuiz;
 import dad.core.domain.Quiz;
 import dad.dataprovider.entity.AlternativaEntity;
 import dad.dataprovider.entity.PerguntaEntity;
 import dad.dataprovider.entity.QuizEntity;
+import java.time.OffsetDateTime;
+import java.util.List;
+import org.springframework.stereotype.Component;
 
 @Component
 public class QuizPersistenceMapper {
 
-  public AlternativaQuiz toDomain(
-      AlternativaEntity entity) {
-    return new AlternativaQuiz(
-        entity.id,
-        entity.perguntaId,
-        entity.texto,
-        entity.correta);
+  public AlternativaQuiz toDomain(AlternativaEntity entity) {
+    return new AlternativaQuiz(entity.id, entity.perguntaId, entity.texto, entity.correta);
   }
 
-  public PerguntaQuiz toDomain(
-      PerguntaEntity entity,
-      List<AlternativaEntity> alternativas) {
+  public PerguntaQuiz toDomain(PerguntaEntity entity, List<AlternativaEntity> alternativas) {
     return new PerguntaQuiz(
         entity.id,
         entity.quizId,
         entity.enunciado,
         entity.ordem,
-        alternativas.stream()
-            .map(this::toDomain)
-            .toList());
+        alternativas.stream().map(this::toDomain).toList());
   }
 
-  public Quiz toDomain(
-      QuizEntity entity,
-      List<PerguntaQuiz> perguntas) {
+  public Quiz toDomain(QuizEntity entity, List<PerguntaQuiz> perguntas) {
     return new Quiz(
         entity.id,
         entity.cursoId,
@@ -61,9 +48,7 @@ public class QuizPersistenceMapper {
     return entity;
   }
 
-  public void atualizar(
-      QuizEntity entity,
-      Quiz quiz) {
+  public void atualizar(QuizEntity entity, Quiz quiz) {
     entity.cursoId = quiz.cursoId();
     entity.aulaId = quiz.aulaId();
     entity.titulo = quiz.titulo();
@@ -72,10 +57,7 @@ public class QuizPersistenceMapper {
     entity.ativo = quiz.ativo();
   }
 
-  public PerguntaEntity toNovaEntity(
-      PerguntaQuiz pergunta,
-      Integer quizId,
-      int ordem) {
+  public PerguntaEntity toNovaEntity(PerguntaQuiz pergunta, Integer quizId, int ordem) {
     var entity = new PerguntaEntity();
 
     entity.quizId = quizId;
@@ -85,9 +67,7 @@ public class QuizPersistenceMapper {
     return entity;
   }
 
-  public AlternativaEntity toNovaEntity(
-      AlternativaQuiz alternativa,
-      Integer perguntaId) {
+  public AlternativaEntity toNovaEntity(AlternativaQuiz alternativa, Integer perguntaId) {
     var entity = new AlternativaEntity();
 
     entity.perguntaId = perguntaId;

@@ -15,15 +15,11 @@ public record Dashboard(
     long agendamentos,
     long usuariosCadastradosHoje,
     long postagensHoje,
+    long coletasHoje,
     List<Mes> evolucao,
     List<UsuarioRecente> usuariosRecentes) {
 
-  public record Mes(
-      String mes,
-      long usuariosNovos,
-      long cooperativasNovas,
-      long postagens) {
-  }
+  public record Mes(String mes, long usuariosNovos, long cooperativasNovas, long postagens) {}
 
   public record UsuarioRecente(
       Integer id,
@@ -31,6 +27,5 @@ public record Dashboard(
       String email,
       String tipo,
       boolean ativo,
-      OffsetDateTime registroEm) {
-  }
+      OffsetDateTime registroEm) {}
 }

@@ -22,15 +22,10 @@ public record Coleta(
       OffsetDateTime dataInicio,
       OffsetDateTime dataFim,
       boolean recorrente,
-      List<Integer> diasSemanaIds) {
-  }
+      List<Integer> diasSemanaIds) {}
 
   public record RegistroVisita(
-      OffsetDateTime data,
-      boolean realizada,
-      boolean confirmada,
-      String observacao) {
-  }
+      OffsetDateTime data, boolean realizada, boolean confirmada, String observacao) {}
 
   public record Visita(
       Integer id,
@@ -38,6 +33,5 @@ public record Coleta(
       boolean realizada,
       boolean confirmada,
       OffsetDateTime confirmadoEm,
-      String observacao) {
-  }
+      String observacao) {}
 }

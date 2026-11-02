@@ -11,5 +11,4 @@ public record CriarUsuario(
     String cpf,
     String avatar,
     Endereco endereco,
-    Integer condominioId) {
-}
+    Integer condominioId) {}

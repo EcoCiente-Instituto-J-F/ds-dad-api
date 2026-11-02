@@ -1,9 +1,5 @@
 package dad.entrypoint.mapper;
 
-import java.util.Locale;
-
-import org.springframework.stereotype.Component;
-
 import dad.core.domain.Cooperativa;
 import dad.core.domain.Endereco;
 import dad.core.domain.Pagina;
@@ -13,24 +9,26 @@ import dad.entrypoint.dto.request.EnderecoRequest;
 import dad.entrypoint.dto.response.CooperativaResponse;
 import dad.entrypoint.dto.response.EnderecoResponse;
 import dad.entrypoint.dto.response.PaginaResponse;
+import java.util.Locale;
+import org.springframework.stereotype.Component;
 
 @Component
 public class CooperativaMapper {
 
-  public Cooperativa toDomain(
-      Integer id,
-      CooperativaRequest request) {
-    var pontos = request.pontos()
-        .stream()
-        .map(ponto -> new PontoColeta(
-            ponto.id(),
-            ponto.nome().trim(),
-            ponto.abertura(),
-            ponto.fechamento(),
-            ponto.ativo(),
-            toDomain(ponto.endereco()),
-            ponto.categoriaIds()))
-        .toList();
+  public Cooperativa toDomain(Integer id, CooperativaRequest request) {
+    var pontos =
+        request.pontos().stream()
+            .map(
+                ponto ->
+                    new PontoColeta(
+                        ponto.id(),
+                        ponto.nome().trim(),
+                        ponto.abertura(),
+                        ponto.fechamento(),
+                        ponto.ativo(),
+                        toDomain(ponto.endereco()),
+                        ponto.categoriaIds()))
+            .toList();
 
     String email = limpar(request.email());
 
@@ -41,9 +39,7 @@ public class CooperativaMapper {
     return new Cooperativa(
         id,
         request.nome().trim(),
-        request.cnpj()
-            .replaceAll("[^A-Za-z0-9]", "")
-            .toUpperCase(Locale.ROOT),
+        request.cnpj().replaceAll("[^A-Za-z0-9]", "").toUpperCase(Locale.ROOT),
         email,
         limpar(request.telefone()),
         request.usuarioId(),
@@ -53,8 +49,7 @@ public class CooperativaMapper {
         pontos);
   }
 
-  public CooperativaResponse toResponse(
-      Cooperativa cooperativa) {
+  public CooperativaResponse toResponse(Cooperativa cooperativa) {
     return new CooperativaResponse(
         cooperativa.id(),
         cooperativa.nome(),
@@ -65,27 +60,19 @@ public class CooperativaMapper {
         cooperativa.criadoEm(),
         toResponse(cooperativa.endereco()),
         cooperativa.categoriaIds(),
-        cooperativa.pontos()
-            .stream()
-            .map(this::toResponse)
-            .toList());
+        cooperativa.pontos().stream().map(this::toResponse).toList());
   }
 
-  public PaginaResponse<CooperativaResponse> toResponse(
-      Pagina<Cooperativa> pagina) {
+  public PaginaResponse<CooperativaResponse> toResponse(Pagina<Cooperativa> pagina) {
     return new PaginaResponse<>(
-        pagina.itens()
-            .stream()
-            .map(this::toResponse)
-            .toList(),
+        pagina.itens().stream().map(this::toResponse).toList(),
         pagina.pagina(),
         pagina.tamanho(),
         pagina.totalItens(),
         pagina.totalPaginas());
   }
 
-  private CooperativaResponse.PontoResponse toResponse(
-      PontoColeta ponto) {
+  private CooperativaResponse.PontoResponse toResponse(PontoColeta ponto) {
     return new CooperativaResponse.PontoResponse(
         ponto.id(),
         ponto.nome(),
@@ -96,8 +83,7 @@ public class CooperativaMapper {
         ponto.categoriaIds());
   }
 
-  private Endereco toDomain(
-      EnderecoRequest request) {
+  private Endereco toDomain(EnderecoRequest request) {
     if (request == null) {
       return null;
     }
@@ -111,8 +97,7 @@ public class CooperativaMapper {
         limpar(request.complemento()));
   }
 
-  private EnderecoResponse toResponse(
-      Endereco endereco) {
+  private EnderecoResponse toResponse(Endereco endereco) {
     if (endereco == null) {
       return null;
     }
@@ -127,8 +112,6 @@ public class CooperativaMapper {
   }
 
   private String limpar(String valor) {
-    return valor == null || valor.isBlank()
-        ? null
-        : valor.trim();
+    return valor == null || valor.isBlank() ? null : valor.trim();
   }
 }

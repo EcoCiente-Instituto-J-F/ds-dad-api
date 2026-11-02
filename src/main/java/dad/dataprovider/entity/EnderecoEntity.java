@@ -1,32 +1,37 @@
 package dad.dataprovider.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "tb_enderecos")
 public class EnderecoEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_endereco")
-    public Integer id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @Column(name = "id_endereco")
+  public Integer id;
 
-    @Column(name = "cep")
-    public String cep;
+  @Column(name = "cep")
+  public String cep;
 
-    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.CHAR)
-    @Column(name = "estado", length = 2)
-    public String uf;
+  @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.CHAR)
+  @Column(name = "estado", length = 2)
+  public String uf;
 
-    @Column(name = "cidade")
-    public String cidade;
+  @Column(name = "cidade")
+  public String cidade;
 
-    @Column(name = "logradouro")
-    public String logradouro;
+  @Column(name = "logradouro")
+  public String logradouro;
 
-    @Column(name = "numero")
-    public String numero;
+  @Column(name = "numero")
+  public String numero;
 
-    @Column(name = "complemento")
-    public String complemento;
+  @Column(name = "complemento")
+  public String complemento;
 }

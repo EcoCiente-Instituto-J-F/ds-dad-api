@@ -7,6 +7,4 @@ public record PerguntaQuiz(
     Integer quizId,
     String enunciado,
     Integer ordem,
-    List<AlternativaQuiz> alternativas
-) {
-}
+    List<AlternativaQuiz> alternativas) {}

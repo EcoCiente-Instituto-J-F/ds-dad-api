@@ -10,9 +10,10 @@ public record Catalogos(
     List<Opcao> statusAgendamentos,
     List<Sindico> sindicos) {
 
-  public record Opcao(
-      Integer id,
-      String nome) {
+  public record Opcao(Integer id, String nome, List<Integer> idsEquivalentes) {
+    public Opcao(Integer id, String nome) {
+      this(id, nome, List.of(id));
+    }
   }
 
   public record Categoria(
@@ -21,18 +22,9 @@ public record Catalogos(
       boolean permiteReciclagem,
       String cor,
       Integer pontosBase,
-      Integer limitePontosDiario) {
-  }
+      Integer limitePontosDiario) {}
 
-  public record DiaSemana(
-      Integer id,
-      String nome,
-      Integer numero) {
-  }
+  public record DiaSemana(Integer id, String nome, Integer numero) {}
 
-  public record Sindico(
-      Integer id,
-      Integer usuarioId,
-      String nome) {
-  }
+  public record Sindico(Integer id, Integer usuarioId, String nome) {}
 }

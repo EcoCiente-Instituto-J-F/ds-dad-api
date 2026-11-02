@@ -1,5 +1,12 @@
 package dad.integration;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.sql.DriverManager;
@@ -12,9 +19,7 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.junit.jupiter.api.BeforeEach;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -27,17 +32,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
-
 import org.testcontainers.containers.PostgreSQLContainer;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
-
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -45,83 +40,63 @@ public abstract class AbstractIntegrationTest {
 
   protected static final ZoneId ZONA = ZoneId.of("America/Sao_Paulo");
 
-  protected static final String JWT_SECRET = "chave-de-teste-ecociente-dad-"
-      + "0123456789012345678901234567890123456789";
+  protected static final String JWT_SECRET =
+      "chave-de-teste-ecociente-dad-" + "0123456789012345678901234567890123456789";
 
   protected static final String ADMIN_EMAIL = "admin@teste.com";
 
   protected static final String SENHA = "Teste@123";
 
-  private static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine")
-      .withDatabaseName("ecociente_test")
-      .withUsername("teste")
-      .withPassword("teste");
+  private static final PostgreSQLContainer<?> POSTGRES =
+      new PostgreSQLContainer<>("postgres:16-alpine")
+          .withDatabaseName("ecociente_test")
+          .withUsername("teste")
+          .withPassword("teste");
 
- 
   static {
     POSTGRES.start();
 
     try {
-      String schema = new ClassPathResource(
-          "sql/ecociente-schema.sql").getContentAsString(StandardCharsets.UTF_8);
+      String schema =
+          new ClassPathResource("sql/ecociente-schema.sql")
+              .getContentAsString(StandardCharsets.UTF_8);
 
-      try (
-          var connection = DriverManager.getConnection(
-              POSTGRES.getJdbcUrl(),
-              POSTGRES.getUsername(),
-              POSTGRES.getPassword());
+      try (var connection =
+              DriverManager.getConnection(
+                  POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
           var statement = connection.createStatement()) {
-   
+
         statement.execute(schema);
       }
     } catch (Exception exception) {
       POSTGRES.stop();
 
-      throw new IllegalStateException(
-          "Não foi possível preparar o schema dos testes",
-          exception);
+      throw new IllegalStateException("Não foi possível preparar o schema dos testes", exception);
     }
   }
 
   @DynamicPropertySource
   static void configurar(DynamicPropertyRegistry registry) {
-    registry.add(
-        "spring.datasource.url",
-        POSTGRES::getJdbcUrl);
+    registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
 
-    registry.add(
-        "spring.datasource.username",
-        POSTGRES::getUsername);
+    registry.add("spring.datasource.username", POSTGRES::getUsername);
 
-    registry.add(
-        "spring.datasource.password",
-        POSTGRES::getPassword);
+    registry.add("spring.datasource.password", POSTGRES::getPassword);
 
-    registry.add(
-        "spring.jpa.hibernate.ddl-auto",
-        () -> "validate");
+    registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
 
-    registry.add(
-        "spring.sql.init.mode",
-        () -> "never");
+    registry.add("spring.sql.init.mode", () -> "never");
 
-    registry.add(
-        "app.security.jwt.secret",
-        () -> JWT_SECRET);
+    registry.add("app.security.jwt.secret", () -> JWT_SECRET);
 
-    registry.add(
-        "app.cors.origens",
-        () -> "http://localhost:5173");
+    registry.add("app.cors.origens", () -> "http://localhost:5173");
   }
 
-  @Autowired
-  protected MockMvc mvc;
+  @Autowired protected MockMvc mvc;
 
-  @Autowired
-  protected ObjectMapper objectMapper;
+  @Autowired protected ObjectMapper objectMapper;
 
-  @Autowired
-  protected JdbcTemplate jdbc;
+  @Autowired protected JdbcTemplate jdbc;
 
   protected Integer tipoAdmin;
   protected Integer tipoComum;
@@ -148,7 +123,8 @@ public abstract class AbstractIntegrationTest {
 
   @BeforeEach
   void prepararBanco() {
-    jdbc.execute("""
+    jdbc.execute(
+        """
         TRUNCATE TABLE
             tb_enderecos,
             tb_lkp_tipos_usuarios,
@@ -167,7 +143,9 @@ public abstract class AbstractIntegrationTest {
     tipoSindico = inserirTipo("Síndico");
     tipoCooperativa = inserirTipo("Cooperativa");
 
-    tipoCondominio = id("""
+    tipoCondominio =
+        id(
+            """
         INSERT INTO tb_lkp_tipos_condominios (
             nome_tipo
         )
@@ -184,7 +162,8 @@ public abstract class AbstractIntegrationTest {
     statusRealizado = inserirStatus("Realizado");
     inserirStatus("Recusado");
 
-    jdbc.update("""
+    jdbc.update(
+        """
         INSERT INTO tb_lkp_niveis_confianca (
             nome_nivel,
             peso_voto
@@ -192,41 +171,38 @@ public abstract class AbstractIntegrationTest {
         VALUES ('morador_comum', 1)
         """);
 
-
     String[] nomes = {
-        "Quarta-feira",
-        "Domingo",
-        "Sexta-feira",
-        "Segunda-feira",
-        "Sábado",
-        "Terça-feira",
-        "Quinta-feira"
+      "Quarta-feira",
+      "Domingo",
+      "Sexta-feira",
+      "Segunda-feira",
+      "Sábado",
+      "Terça-feira",
+      "Quinta-feira"
     };
 
-    int[] numeros = { 3, 0, 5, 1, 6, 2, 4 };
+    int[] numeros = {3, 0, 5, 1, 6, 2, 4};
 
     for (int indice = 0; indice < nomes.length; indice++) {
-      diasIds[numeros[indice]] = id("""
+      diasIds[numeros[indice]] =
+          id(
+              """
           INSERT INTO tb_lkp_dias_semanas (
               nome_dia
           )
           VALUES (?)
           RETURNING id_dia_semana
           """,
-          nomes[indice]);
+              nomes[indice]);
     }
 
-    adminId = inserirUsuario(
-        "Administrador",
-        ADMIN_EMAIL,
-        tipoAdmin);
+    adminId = inserirUsuario("Administrador", ADMIN_EMAIL, tipoAdmin);
 
-    comumId = inserirUsuario(
-        "Usuário comum",
-        "comum@teste.com",
-        tipoComum);
+    comumId = inserirUsuario("Usuário comum", "comum@teste.com", tipoComum);
 
-    condominioId = id("""
+    condominioId =
+        id(
+            """
         INSERT INTO tb_condominios (
             nome_condominio,
             cnpj,
@@ -237,13 +213,15 @@ public abstract class AbstractIntegrationTest {
         VALUES (?, ?, ?, ?, ?)
         RETURNING id_condominio
         """,
-        "Condomínio Base",
-        "11444777000161",
-        "BASE-01",
-        tipoCondominio,
-        inserirEndereco());
+            "Condomínio Base",
+            "11444777000161",
+            "BASE-01",
+            tipoCondominio,
+            inserirEndereco());
 
-    cooperativaId = id("""
+    cooperativaId =
+        id(
+            """
         INSERT INTO tb_cooperativas (
             nome_cooperativa,
             cnpj_cooperativa,
@@ -253,19 +231,17 @@ public abstract class AbstractIntegrationTest {
         VALUES (?, ?, ?, ?)
         RETURNING id_cooperativa
         """,
-        "Cooperativa Base",
-        "11444777000161",
-        "base@cooperativa.com",
-        inserirEndereco());
+            "Cooperativa Base",
+            "11444777000161",
+            "base@cooperativa.com",
+            inserirEndereco());
 
-    tokenAdmin = token(
-        adminId,
-        ADMIN_EMAIL,
-        "ADMIN");
+    tokenAdmin = token(adminId, ADMIN_EMAIL, "ADMIN");
   }
 
   protected Integer inserirTipo(String nome) {
-    return id("""
+    return id(
+        """
         INSERT INTO tb_lkp_tipos_usuarios (
             nome_tipo
         )
@@ -275,10 +251,9 @@ public abstract class AbstractIntegrationTest {
         nome);
   }
 
-  protected Integer inserirCategoria(
-      String nome,
-      int pontos) {
-    return id("""
+  protected Integer inserirCategoria(String nome, int pontos) {
+    return id(
+        """
         INSERT INTO tb_lkp_categorias_residuos (
             nome_categoria,
             pontos_base
@@ -291,7 +266,8 @@ public abstract class AbstractIntegrationTest {
   }
 
   protected Integer inserirStatus(String nome) {
-    return id("""
+    return id(
+        """
         INSERT INTO tb_lkp_status_agendamentos (
             nome_status
         )
@@ -302,7 +278,8 @@ public abstract class AbstractIntegrationTest {
   }
 
   protected Integer inserirEndereco() {
-    return id("""
+    return id(
+        """
         INSERT INTO tb_enderecos (
             cep,
             estado,
@@ -321,14 +298,11 @@ public abstract class AbstractIntegrationTest {
         """);
   }
 
-  protected Integer inserirUsuario(
-      String nome,
-      String email,
-      Integer tipoId) {
-    String hash = new BCryptPasswordEncoder(4)
-        .encode(SENHA);
+  protected Integer inserirUsuario(String nome, String email, Integer tipoId) {
+    String hash = new BCryptPasswordEncoder(4).encode(SENHA);
 
-    return id("""
+    return id(
+        """
         INSERT INTO tb_usuarios (
             nome_usuario,
             email_usuario,
@@ -346,118 +320,63 @@ public abstract class AbstractIntegrationTest {
         inserirEndereco());
   }
 
-  protected Integer id(
-      String sql,
-      Object... parametros) {
-    return jdbc.queryForObject(
-        sql,
-        Integer.class,
-        parametros);
+  protected Integer id(String sql, Object... parametros) {
+    return jdbc.queryForObject(sql, Integer.class, parametros);
   }
 
-  protected long contar(
-      String sql,
-      Object... parametros) {
-    return jdbc.queryForObject(
-        sql,
-        Long.class,
-        parametros);
+  protected long contar(String sql, Object... parametros) {
+    return jdbc.queryForObject(sql, Long.class, parametros);
   }
 
-  protected String token(
-      Integer usuarioId,
-      String email,
-      String perfil) {
-    return token(
-        usuarioId,
-        email,
-        perfil,
-        Instant.now().plusSeconds(3600));
+  protected String token(Integer usuarioId, String email, String perfil) {
+    return token(usuarioId, email, perfil, Instant.now().plusSeconds(3600));
   }
 
-  protected String token(
-      Integer usuarioId,
-      String email,
-      String perfil,
-      Instant expiracao) {
+  protected String token(Integer usuarioId, String email, String perfil, Instant expiracao) {
     return Jwts.builder()
         .subject(email)
         .claim("usuarioId", usuarioId)
         .claim("perfil", perfil)
-        .issuedAt(
-            Date.from(
-                Instant.now().minusSeconds(120)))
+        .issuedAt(Date.from(Instant.now().minusSeconds(120)))
         .expiration(Date.from(expiracao))
-        .signWith(
-            Keys.hmacShaKeyFor(
-                JWT_SECRET.getBytes(
-                    StandardCharsets.UTF_8)))
+        .signWith(Keys.hmacShaKeyFor(JWT_SECRET.getBytes(StandardCharsets.UTF_8)))
         .compact();
   }
 
-  protected ResultActions chamar(
-      HttpMethod metodo,
-      String caminho,
-      Object corpo) throws Exception {
-    return chamar(
-        metodo,
-        caminho,
-        corpo,
-        tokenAdmin);
+  protected ResultActions chamar(HttpMethod metodo, String caminho, Object corpo) throws Exception {
+    return chamar(metodo, caminho, corpo, tokenAdmin);
   }
 
-  protected ResultActions chamar(
-      HttpMethod metodo,
-      String caminho,
-      Object corpo,
-      String token) throws Exception {
-    var builder = request(
-        metodo,
-        URI.create(caminho)).accept(MediaType.APPLICATION_JSON);
+  protected ResultActions chamar(HttpMethod metodo, String caminho, Object corpo, String token)
+      throws Exception {
+    var builder = request(metodo, URI.create(caminho)).accept(MediaType.APPLICATION_JSON);
 
     if (token != null) {
-      builder.header(
-          "Authorization",
-          "Bearer " + token);
+      builder.header("Authorization", "Bearer " + token);
     }
 
     if (corpo != null) {
-      builder.contentType(
-          MediaType.APPLICATION_JSON);
+      builder.contentType(MediaType.APPLICATION_JSON);
 
-      builder.content(
-          objectMapper.writeValueAsBytes(corpo));
+      builder.content(objectMapper.writeValueAsBytes(corpo));
     }
 
     return mvc.perform(builder);
   }
 
-  protected JsonNode json(
-      ResultActions resultado) throws Exception {
-    return objectMapper.readTree(
-        resultado.andReturn()
-            .getResponse()
-            .getContentAsByteArray());
+  protected JsonNode json(ResultActions resultado) throws Exception {
+    return objectMapper.readTree(resultado.andReturn().getResponse().getContentAsByteArray());
   }
 
-  protected JsonNode criar(
-      String caminho,
-      Object corpo) throws Exception {
-    return json(
-        chamar(
-            HttpMethod.POST,
-            caminho,
-            corpo).andExpect(status().isCreated()));
+  protected JsonNode criar(String caminho, Object corpo) throws Exception {
+    return json(chamar(HttpMethod.POST, caminho, corpo).andExpect(status().isCreated()));
   }
 
-  protected Map<String, Object> dados(
-      Object... valores) {
+  protected Map<String, Object> dados(Object... valores) {
     Map<String, Object> resultado = new LinkedHashMap<>();
 
     for (int indice = 0; indice < valores.length; indice += 2) {
-      resultado.put(
-          (String) valores[indice],
-          valores[indice + 1]);
+      resultado.put((String) valores[indice], valores[indice + 1]);
     }
 
     return resultado;
@@ -475,23 +394,36 @@ public abstract class AbstractIntegrationTest {
 
   protected Map<String, Object> usuario() {
     return dados(
-        "nome", "Pessoa Teste",
-        "email", "pessoa@teste.com",
-        "senha", SENHA,
-        "tipoUsuarioId", tipoComum,
-        "dataNascimento", "2000-01-10",
-        "cpf", "52998224725",
-        "avatar", null,
-        "endereco", endereco(),
-        "condominioId", null);
+        "nome",
+        "Pessoa Teste",
+        "email",
+        "pessoa@teste.com",
+        "senha",
+        SENHA,
+        "tipoUsuarioId",
+        tipoComum,
+        "dataNascimento",
+        "2000-01-10",
+        "cpf",
+        "52998224725",
+        "avatar",
+        null,
+        "endereco",
+        endereco(),
+        "condominioId",
+        null);
   }
 
   protected Map<String, Object> curso() {
     return dados(
-        "titulo", "Curso Integração",
-        "descricao", "Conteúdo educativo para testes",
-        "ativo", true,
-        "aulas", List.of(
+        "titulo",
+        "Curso Integração",
+        "descricao",
+        "Conteúdo educativo para testes",
+        "ativo",
+        true,
+        "aulas",
+        List.of(
             dados(
                 "id", null,
                 "titulo", "Primeira aula",
@@ -503,69 +435,87 @@ public abstract class AbstractIntegrationTest {
   }
 
   protected JsonNode criarCurso() throws Exception {
-    return criar(
-        "/api/admin/v1/cursos",
-        curso());
+    return criar("/api/admin/v1/cursos", curso());
   }
 
-  protected Map<String, Object> quiz(
-      int cursoId,
-      int aulaId) {
+  protected Map<String, Object> quiz(int cursoId, int aulaId) {
     return dados(
-        "cursoId", cursoId,
-        "aulaId", aulaId,
-        "titulo", "Quiz Integração",
-        "notaMinima", 70,
-        "pontos", 20,
-        "ativo", true,
-        "perguntas", List.of(
+        "cursoId",
+        cursoId,
+        "aulaId",
+        aulaId,
+        "titulo",
+        "Quiz Integração",
+        "notaMinima",
+        70,
+        "pontos",
+        20,
+        "ativo",
+        true,
+        "perguntas",
+        List.of(
             dados(
                 "enunciado",
                 "Qual material pode ser reciclado?",
                 "alternativas",
                 List.of(
-                    dados(
-                        "texto", "Papel",
-                        "correta", true),
-                    dados(
-                        "texto", "Material contaminado",
-                        "correta", false)))));
+                    dados("texto", "Papel", "correta", true),
+                    dados("texto", "Material contaminado", "correta", false)))));
   }
 
   protected Map<String, Object> condominio() {
     return dados(
-        "nome", "Edifício Novo",
-        "cnpj", "11222333000181",
-        "codigoAcesso", "NOVO-01",
-        "ativo", true,
-        "tipoId", tipoCondominio,
-        "sindicoId", null,
-        "endereco", endereco(),
-        "torres", List.of(
-            dados("id", null, "nome", "A"),
-            dados("id", null, "nome", "B")));
+        "nome",
+        "Edifício Novo",
+        "cnpj",
+        "11222333000181",
+        "codigoAcesso",
+        "NOVO-01",
+        "ativo",
+        true,
+        "tipoId",
+        tipoCondominio,
+        "sindicoId",
+        null,
+        "endereco",
+        endereco(),
+        "torres",
+        List.of(dados("id", null, "nome", "A"), dados("id", null, "nome", "B")));
   }
 
   protected Map<String, Object> cooperativa() {
     return dados(
-        "nome", "Cooperativa Nova",
-        "cnpj", "11222333000181",
-        "email", "nova@cooperativa.com",
-        "telefone", "11999999999",
-        "usuarioId", null,
-        "endereco", endereco(),
+        "nome",
+        "Cooperativa Nova",
+        "cnpj",
+        "11222333000181",
+        "email",
+        "nova@cooperativa.com",
+        "telefone",
+        "11999999999",
+        "usuarioId",
+        null,
+        "endereco",
+        endereco(),
         "categoriaIds",
         List.of(categoria1, categoria2),
         "pontos",
         List.of(
             dados(
-                "id", null,
-                "nome", "Ponto Central",
-                "abertura", "08:00:00",
-                "fechamento", "17:00:00",
-                "ativo", true,
-                "endereco", endereco(),
-                "categoriaIds", List.of(categoria1))));
+                "id",
+                null,
+                "nome",
+                "Ponto Central",
+                "abertura",
+                "08:00:00",
+                "fechamento",
+                "17:00:00",
+                "ativo",
+                true,
+                "endereco",
+                endereco(),
+                "categoriaIds",
+                List.of(categoria1))));
   }
 
   protected OffsetDateTime dataVisita() {
@@ -582,22 +532,20 @@ public abstract class AbstractIntegrationTest {
     var agora = ZonedDateTime.now(ZONA);
 
     return dados(
-        "condominioId", condominioId,
-        "cooperativaId", cooperativaId,
-        "statusId", statusAgendado,
+        "condominioId",
+        condominioId,
+        "cooperativaId",
+        cooperativaId,
+        "statusId",
+        statusAgendado,
         "dataInicio",
-        agora.minusDays(3)
-            .toLocalDate()
-            .atStartOfDay(ZONA)
-            .toOffsetDateTime(),
+        agora.minusDays(3).toLocalDate().atStartOfDay(ZONA).toOffsetDateTime(),
         "dataFim",
-        agora.minusDays(1)
-            .toLocalDate()
-            .atTime(23, 59, 59)
-            .atZone(ZONA)
-            .toOffsetDateTime(),
-        "recorrente", false,
-        "diasSemanaIds", List.of());
+        agora.minusDays(1).toLocalDate().atTime(23, 59, 59).atZone(ZONA).toOffsetDateTime(),
+        "recorrente",
+        false,
+        "diasSemanaIds",
+        List.of());
   }
 
   protected int idDia(DayOfWeek dia) {

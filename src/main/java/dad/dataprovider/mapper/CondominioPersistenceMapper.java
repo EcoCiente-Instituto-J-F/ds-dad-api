@@ -1,15 +1,13 @@
 package dad.dataprovider.mapper;
 
-import java.util.List;
-
-import org.springframework.stereotype.Component;
-
 import dad.core.domain.Condominio;
 import dad.core.domain.Endereco;
 import dad.core.domain.Torre;
 import dad.dataprovider.entity.CondominioEntity;
 import dad.dataprovider.entity.EnderecoEntity;
 import dad.dataprovider.entity.TorreEntity;
+import java.util.List;
+import org.springframework.stereotype.Component;
 
 @Component
 public class CondominioPersistenceMapper {
@@ -20,18 +18,11 @@ public class CondominioPersistenceMapper {
     }
 
     return new Endereco(
-        entity.cep,
-        entity.uf,
-        entity.cidade,
-        entity.logradouro,
-        entity.numero,
-        entity.complemento);
+        entity.cep, entity.uf, entity.cidade, entity.logradouro, entity.numero, entity.complemento);
   }
 
   public Condominio toDomain(
-      CondominioEntity entity,
-      EnderecoEntity endereco,
-      List<TorreEntity> torres) {
+      CondominioEntity entity, EnderecoEntity endereco, List<TorreEntity> torres) {
     return new Condominio(
         entity.id,
         entity.nome,
@@ -41,16 +32,10 @@ public class CondominioPersistenceMapper {
         entity.tipoId,
         entity.sindicoId,
         toDomain(endereco),
-        torres.stream()
-            .map(torre -> new Torre(
-                torre.id,
-                torre.nome))
-            .toList());
+        torres.stream().map(torre -> new Torre(torre.id, torre.nome)).toList());
   }
 
-  public void atualizar(
-      CondominioEntity entity,
-      Condominio condominio) {
+  public void atualizar(CondominioEntity entity, Condominio condominio) {
     entity.nome = condominio.nome();
     entity.cnpj = condominio.cnpj();
     entity.codigoAcesso = condominio.codigoAcesso();

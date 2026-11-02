@@ -1,24 +1,12 @@
 package dad.dataprovider.gateway;
 
-import java.text.Normalizer;
-import java.time.DayOfWeek;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.util.HashSet;
-import java.util.Locale;
-import java.util.Objects;
-import java.util.Optional;
-
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
-
 import dad.core.domain.Coleta;
 import dad.core.domain.Pagina;
 import dad.core.exception.RecursoNaoEncontradoException;
 import dad.core.exception.RegraNegocioException;
 import dad.core.gateway.ColetaGateway;
+import dad.core.regra.DiasSemana;
+import dad.core.regra.RegrasColeta;
 import dad.dataprovider.entity.ColetaEntity;
 import dad.dataprovider.entity.VisitaEntity;
 import dad.dataprovider.mapper.ColetaPersistenceMapper;
@@ -26,6 +14,13 @@ import dad.dataprovider.repository.ColetaRepository;
 import dad.dataprovider.repository.CondominioRepository;
 import dad.dataprovider.repository.CooperativaRepository;
 import dad.dataprovider.repository.VisitaColetaRepository;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.util.Optional;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @Transactional
@@ -61,24 +56,15 @@ public class ColetaGatewayImpl implements ColetaGateway {
       OffsetDateTime fim,
       int pagina,
       int tamanho) {
-    var pageable = PageRequest.of(
-        pagina,
-        tamanho,
-        Sort.by("dataInicio").descending()
-            .and(Sort.by("id").descending()));
+    var pageable =
+        PageRequest.of(
+            pagina, tamanho, Sort.by("dataInicio").descending().and(Sort.by("id").descending()));
 
-    var resultado = repository.buscar(
-        busca == null ? "" : busca.trim(),
-        statusId,
-        inicio,
-        fim,
-        pageable);
+    var resultado =
+        repository.buscar(busca == null ? "" : busca.trim(), statusId, inicio, fim, pageable);
 
     return new Pagina<>(
-        resultado.getContent()
-            .stream()
-            .map(this::toDomain)
-            .toList(),
+        resultado.getContent().stream().map(this::toDomain).toList(),
         resultado.getNumber(),
         resultado.getSize(),
         resultado.getTotalElements(),
@@ -88,27 +74,17 @@ public class ColetaGatewayImpl implements ColetaGateway {
   @Override
   @Transactional(readOnly = true)
   public Optional<Coleta> buscarPorId(Integer id) {
-    return repository.findById(id)
-        .map(this::toDomain);
+    return repository.findById(id).map(this::toDomain);
   }
 
   @Override
-  public Coleta salvar(
-      Integer id,
-      Coleta.Dados dados) {
-    var entity = id == null
-        ? new ColetaEntity()
-        : exigirComBloqueio(id);
+  public Coleta salvar(Integer id, Coleta.Dados dados) {
+    var entity = id == null ? new ColetaEntity() : exigirComBloqueio(id);
 
-    boolean possuiVisitas = id != null
-        && visitaRepository.countByColetaId(id) > 0;
+    boolean possuiVisitas = id != null && visitaRepository.countByColetaId(id) > 0;
 
     if (possuiVisitas) {
-      if (!mesmaProgramacao(entity, dados)) {
-        throw new RegraNegocioException(
-            "O agendamento possui visitas. "
-                + "Preserve participantes, datas e recorrência");
-      }
+      RegrasColeta.validarEdicaoComVisitas(programacao(entity), dados);
 
       nomeStatus(dados.statusId());
 
@@ -138,21 +114,13 @@ public class ColetaGatewayImpl implements ColetaGateway {
   public Coleta cancelar(Integer id) {
     var entity = exigirComBloqueio(id);
 
-    String status = normalizar(
-        nomeStatus(entity.statusId));
+    RegrasColeta.validarCancelamento(nomeStatus(entity.statusId));
 
-    if (status.equals("REALIZADO")
-        || status.equals("REALIZADA")
-        || status.equals("CONCLUIDO")
-        || status.equals("CONCLUIDA")) {
-      throw new RegraNegocioException(
-          "O agendamento já foi concluído");
-    }
-
-    entity.statusId = repository
-        .buscarStatusCancelado()
-        .orElseThrow(() -> new RegraNegocioException(
-            "Status Cancelado não encontrado no banco"));
+    entity.statusId =
+        repository
+            .buscarStatusCancelado()
+            .orElseThrow(
+                () -> new RegraNegocioException("Status Cancelado não encontrado no banco"));
 
     repository.flush();
 
@@ -160,47 +128,39 @@ public class ColetaGatewayImpl implements ColetaGateway {
   }
 
   @Override
-  public Coleta registrarVisita(
-      Integer id,
-      Coleta.RegistroVisita registro) {
+  public Coleta registrarVisita(Integer id, Coleta.RegistroVisita registro) {
     var coleta = exigirComBloqueio(id);
 
-    String status = normalizar(
-        nomeStatus(coleta.statusId));
-
-    if (status.equals("CANCELADO")
-        || status.equals("CANCELADA")
-        || status.equals("RECUSADO")
-        || status.equals("RECUSADA")) {
-      throw new RegraNegocioException(
-          "O status do agendamento não permite registrar visita");
+    RegrasColeta.validarStatusVisita(nomeStatus(coleta.statusId));
+    RegrasColeta.validarDataVisita(programacao(coleta), registro.data(), OffsetDateTime.now());
+    if (coleta.recorrente) {
+      var dia = registro.data().atZoneSameInstant(ZONA).toLocalDate().getDayOfWeek();
+      boolean permitido =
+          repository.buscarDias(coleta.id).stream()
+              .anyMatch(
+                  diaId ->
+                      DiasSemana.diaDaSemana(
+                              repository
+                                  .buscarNomeDia(diaId)
+                                  .orElseThrow(
+                                      () ->
+                                          new RegraNegocioException(
+                                              "Dia da recorrência não encontrado")))
+                          == dia);
+      RegrasColeta.validarDiaPermitido(permitido);
     }
 
-    validarDataVisita(coleta, registro.data());
+    var dataLocal = registro.data().atZoneSameInstant(ZONA).toLocalDate();
 
-    var dataLocal = registro.data()
-        .atZoneSameInstant(ZONA)
-        .toLocalDate();
+    var inicioDia = dataLocal.atStartOfDay(ZONA).toOffsetDateTime();
 
-    var inicioDia = dataLocal
-        .atStartOfDay(ZONA)
-        .toOffsetDateTime();
+    var fimDia = dataLocal.plusDays(1).atStartOfDay(ZONA).toOffsetDateTime();
 
-    var fimDia = dataLocal.plusDays(1)
-        .atStartOfDay(ZONA)
-        .toOffsetDateTime();
+    var existentes =
+        visitaRepository.findByColetaIdAndDataVisitaGreaterThanEqualAndDataVisitaLessThan(
+            id, inicioDia, fimDia);
 
-    var existentes = visitaRepository
-        .findByColetaIdAndDataVisitaGreaterThanEqualAndDataVisitaLessThan(
-            id,
-            inicioDia,
-            fimDia);
-
-    if (existentes.size() > 1) {
-      throw new RegraNegocioException(
-          "Existem várias visitas para esse dia. "
-              + "É necessário identificar a visita antes de registrar");
-    }
+    RegrasColeta.validarQuantidadeVisitas(existentes.size());
 
     VisitaEntity entity;
 
@@ -210,22 +170,14 @@ public class ColetaGatewayImpl implements ColetaGateway {
     } else {
       entity = existentes.get(0);
 
-      if (entity.realizada
-          || entity.confirmada
-          || entity.confirmadoEm != null
-          || (entity.observacao != null
-              && !entity.observacao.isBlank())) {
-        throw new RegraNegocioException(
-            "A visita desse dia já possui resultado ou observação");
-      }
+      RegrasColeta.validarVisitaSemResultado(
+          entity.realizada, entity.confirmada, entity.confirmadoEm, entity.observacao);
     }
 
     entity.dataVisita = registro.data();
     entity.realizada = registro.realizada();
     entity.confirmada = registro.confirmada();
-    entity.confirmadoEm = registro.confirmada()
-        ? OffsetDateTime.now()
-        : null;
+    entity.confirmadoEm = registro.confirmada() ? OffsetDateTime.now() : null;
     entity.observacao = registro.observacao();
 
     visitaRepository.saveAndFlush(entity);
@@ -234,9 +186,9 @@ public class ColetaGatewayImpl implements ColetaGateway {
   }
 
   private ColetaEntity exigirComBloqueio(Integer id) {
-    return repository.buscarComBloqueio(id)
-        .orElseThrow(() -> new RecursoNaoEncontradoException(
-            "Agendamento não encontrado"));
+    return repository
+        .buscarComBloqueio(id)
+        .orElseThrow(() -> new RecursoNaoEncontradoException("Agendamento não encontrado"));
   }
 
   private Coleta toDomain(ColetaEntity entity) {
@@ -244,165 +196,47 @@ public class ColetaGatewayImpl implements ColetaGateway {
         entity,
         nomeStatus(entity.statusId),
         repository.buscarDias(entity.id),
-        visitaRepository
-            .findByColetaIdOrderByDataVisitaAsc(entity.id));
+        visitaRepository.findByColetaIdOrderByDataVisitaAsc(entity.id));
   }
 
   private String nomeStatus(Integer statusId) {
-    return repository.buscarNomeStatus(statusId)
-        .orElseThrow(() -> new RegraNegocioException(
-            "Status de agendamento não encontrado"));
+    return repository
+        .buscarNomeStatus(statusId)
+        .orElseThrow(() -> new RegraNegocioException("Status de agendamento não encontrado"));
   }
 
   private void validarReferencias(Coleta.Dados dados) {
-    var condominio = condominioRepository
-        .findById(dados.condominioId())
-        .orElseThrow(() -> new RecursoNaoEncontradoException(
-            "Condomínio não encontrado"));
+    var condominio =
+        condominioRepository
+            .findById(dados.condominioId())
+            .orElseThrow(() -> new RecursoNaoEncontradoException("Condomínio não encontrado"));
 
-    if (!condominio.ativo) {
-      throw new RegraNegocioException(
-          "Condomínio inativo");
-    }
+    RegrasColeta.validarCondominioAtivo(condominio.ativo);
 
-    if (!cooperativaRepository.existsById(
-        dados.cooperativaId())) {
-      throw new RecursoNaoEncontradoException(
-          "Cooperativa não encontrada");
+    if (!cooperativaRepository.existsById(dados.cooperativaId())) {
+      throw new RecursoNaoEncontradoException("Cooperativa não encontrada");
     }
 
     nomeStatus(dados.statusId());
 
     for (var diaId : dados.diasSemanaIds()) {
-      var nome = repository.buscarNomeDia(diaId)
-          .orElseThrow(() -> new RegraNegocioException(
-              "Dia da semana não encontrado"));
-
-      diaDaSemana(nome);
-    }
-  }
-
-  private boolean mesmaProgramacao(
-      ColetaEntity entity,
-      Coleta.Dados dados) {
-    return Objects.equals(
-        entity.condominioId,
-        dados.condominioId())
-        && Objects.equals(
-            entity.cooperativaId,
-            dados.cooperativaId())
-        && mesmoInstante(
-            entity.dataInicio,
-            dados.dataInicio())
-        && mesmoInstante(
-            entity.dataFim,
-            dados.dataFim())
-        && entity.recorrente == dados.recorrente()
-        && new HashSet<>(
-            repository.buscarDias(entity.id)).equals(
-                new HashSet<>(
-                    dados.diasSemanaIds()));
-  }
-
-  private boolean mesmoInstante(
-      OffsetDateTime primeiro,
-      OffsetDateTime segundo) {
-    if (primeiro == null || segundo == null) {
-      return primeiro == segundo;
-    }
-
-    return primeiro.toInstant()
-        .equals(segundo.toInstant());
-  }
-
-  private void validarDataVisita(
-      ColetaEntity coleta,
-      OffsetDateTime data) {
-    if (data.isAfter(OffsetDateTime.now())) {
-      throw new RegraNegocioException(
-          "Não registre resultado de uma visita futura");
-    }
-
-    if (!coleta.recorrente) {
-      if (data.isBefore(coleta.dataInicio)
-          || (coleta.dataFim != null
-              && data.isAfter(coleta.dataFim))) {
-        throw new RegraNegocioException(
-            "Visita fora do período do agendamento");
-      }
-
-      return;
-    }
-
-    var dia = data.atZoneSameInstant(ZONA)
-        .toLocalDate();
-
-    var inicio = coleta.dataInicio
-        .atZoneSameInstant(ZONA)
-        .toLocalDate();
-
-    var fim = coleta.dataFim == null
-        ? null
-        : coleta.dataFim
-            .atZoneSameInstant(ZONA)
-            .toLocalDate();
-
-    if (dia.isBefore(inicio)
-        || (fim != null && dia.isAfter(fim))) {
-      throw new RegraNegocioException(
-          "Visita fora do período da recorrência");
-    }
-
-    boolean permitido = repository
-        .buscarDias(coleta.id)
-        .stream()
-        .anyMatch(diaId -> {
-          var nome = repository
+      var nome =
+          repository
               .buscarNomeDia(diaId)
-              .orElseThrow(() -> new RegraNegocioException(
-                  "Dia da recorrência não encontrado"));
+              .orElseThrow(() -> new RegraNegocioException("Dia da semana não encontrado"));
 
-          return diaDaSemana(nome) == dia.getDayOfWeek();
-        });
-
-    if (!permitido) {
-      throw new RegraNegocioException(
-          "A visita não corresponde a um dia da recorrência");
+      DiasSemana.diaDaSemana(nome);
     }
   }
 
-  private DayOfWeek diaDaSemana(String nome) {
-    String dia = normalizar(nome);
-
-    return switch (dia) {
-      case "DOMINGO" -> DayOfWeek.SUNDAY;
-      case "SEGUNDA", "SEGUNDA-FEIRA",
-          "SEGUNDA_FEIRA" ->
-        DayOfWeek.MONDAY;
-      case "TERCA", "TERCA-FEIRA",
-          "TERCA_FEIRA" ->
-        DayOfWeek.TUESDAY;
-      case "QUARTA", "QUARTA-FEIRA",
-          "QUARTA_FEIRA" ->
-        DayOfWeek.WEDNESDAY;
-      case "QUINTA", "QUINTA-FEIRA",
-          "QUINTA_FEIRA" ->
-        DayOfWeek.THURSDAY;
-      case "SEXTA", "SEXTA-FEIRA",
-          "SEXTA_FEIRA" ->
-        DayOfWeek.FRIDAY;
-      case "SABADO" -> DayOfWeek.SATURDAY;
-      default -> throw new RegraNegocioException(
-          "Nome de dia não reconhecido no catálogo: "
-              + nome);
-    };
-  }
-
-  private String normalizar(String valor) {
-    return Normalizer
-        .normalize(valor, Normalizer.Form.NFD)
-        .replaceAll("\\p{M}", "")
-        .trim()
-        .toUpperCase(Locale.ROOT);
+  private Coleta.Dados programacao(ColetaEntity entity) {
+    return new Coleta.Dados(
+        entity.condominioId,
+        entity.cooperativaId,
+        entity.statusId,
+        entity.dataInicio,
+        entity.dataFim,
+        entity.recorrente,
+        repository.buscarDias(entity.id));
   }
 }

@@ -1,13 +1,9 @@
 package dad;
 
+import dad.integration.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class DsDadApiApplicationTests {
-
-	@Test
-	void contextLoads() {
-	}
-
+class DsDadApiApplicationTests extends AbstractIntegrationTest {
+  @Test
+  void contextLoads() {}
 }

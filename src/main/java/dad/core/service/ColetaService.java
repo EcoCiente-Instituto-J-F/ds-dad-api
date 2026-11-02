@@ -1,16 +1,15 @@
 package dad.core.service;
 
-import java.time.OffsetDateTime;
-import java.util.HashSet;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import dad.core.domain.Coleta;
 import dad.core.domain.Pagina;
 import dad.core.exception.RecursoNaoEncontradoException;
 import dad.core.exception.RegraNegocioException;
 import dad.core.gateway.ColetaGateway;
+import dad.core.regra.RegrasPaginacao;
+import java.time.OffsetDateTime;
+import java.util.HashSet;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
@@ -30,68 +29,46 @@ public class ColetaService {
       OffsetDateTime fim,
       int pagina,
       int tamanho) {
-    if (pagina < 0 || tamanho < 1 || tamanho > 100) {
-      throw new RegraNegocioException(
-          "Página deve ser maior ou igual a zero "
-              + "e tamanho deve estar entre 1 e 100");
-    }
+    RegrasPaginacao.validar(pagina, tamanho);
 
     if (statusId != null && statusId <= 0) {
-      throw new RegraNegocioException(
-          "Status inválido");
+      throw new RegraNegocioException("Status inválido");
     }
 
     validarPeriodo(inicio, fim);
 
-    return gateway.listar(
-        busca,
-        statusId,
-        inicio,
-        fim,
-        pagina,
-        tamanho);
+    return gateway.listar(busca, statusId, inicio, fim, pagina, tamanho);
   }
 
   @Transactional(readOnly = true)
   public Coleta buscar(Integer id) {
-    return gateway.buscarPorId(id)
-        .orElseThrow(() -> new RecursoNaoEncontradoException(
-            "Agendamento não encontrado"));
+    return gateway
+        .buscarPorId(id)
+        .orElseThrow(() -> new RecursoNaoEncontradoException("Agendamento não encontrado"));
   }
 
-  public Coleta salvar(
-      Integer id,
-      Coleta.Dados dados) {
+  public Coleta salvar(Integer id, Coleta.Dados dados) {
     if (dados.condominioId() == null
         || dados.cooperativaId() == null
         || dados.statusId() == null
         || dados.dataInicio() == null) {
-      throw new RegraNegocioException(
-          "Informe condomínio, cooperativa, status e início");
+      throw new RegraNegocioException("Informe condomínio, cooperativa, status e início");
     }
 
-    validarPeriodo(
-        dados.dataInicio(),
-        dados.dataFim());
+    validarPeriodo(dados.dataInicio(), dados.dataFim());
 
     var dias = dados.diasSemanaIds();
 
-    if (dias == null
-        || dias.stream().anyMatch(
-            dia -> dia == null || dia <= 0)
-        || dias.size() > 7) {
-      throw new RegraNegocioException(
-          "Lista de dias inválida");
+    if (dias == null || dias.stream().anyMatch(dia -> dia == null || dia <= 0) || dias.size() > 7) {
+      throw new RegraNegocioException("Lista de dias inválida");
     }
 
     if (new HashSet<>(dias).size() != dias.size()) {
-      throw new RegraNegocioException(
-          "Não informe dias repetidos");
+      throw new RegraNegocioException("Não informe dias repetidos");
     }
 
     if (dados.recorrente() && dias.isEmpty()) {
-      throw new RegraNegocioException(
-          "Informe os dias da recorrência");
+      throw new RegraNegocioException("Informe os dias da recorrência");
     }
 
     if (!dados.recorrente() && !dias.isEmpty()) {
@@ -106,37 +83,26 @@ public class ColetaService {
     return gateway.cancelar(id);
   }
 
-  public Coleta registrarVisita(
-      Integer id,
-      Coleta.RegistroVisita registro) {
+  public Coleta registrarVisita(Integer id, Coleta.RegistroVisita registro) {
     if (registro.data() == null) {
-      throw new RegraNegocioException(
-          "Informe a data da visita");
+      throw new RegraNegocioException("Informe a data da visita");
     }
 
     if (registro.confirmada() && !registro.realizada()) {
-      throw new RegraNegocioException(
-          "Não confirme uma visita que não foi realizada");
+      throw new RegraNegocioException("Não confirme uma visita que não foi realizada");
     }
 
     if (!registro.realizada()
-        && (registro.observacao() == null
-            || registro.observacao().isBlank())) {
-      throw new RegraNegocioException(
-          "Informe uma observação quando a visita não for realizada");
+        && (registro.observacao() == null || registro.observacao().isBlank())) {
+      throw new RegraNegocioException("Informe uma observação quando a visita não for realizada");
     }
 
     return gateway.registrarVisita(id, registro);
   }
 
-  private void validarPeriodo(
-      OffsetDateTime inicio,
-      OffsetDateTime fim) {
-    if (inicio != null
-        && fim != null
-        && fim.isBefore(inicio)) {
-      throw new RegraNegocioException(
-          "O fim não pode ser anterior ao início");
+  private void validarPeriodo(OffsetDateTime inicio, OffsetDateTime fim) {
+    if (inicio != null && fim != null && fim.isBefore(inicio)) {
+      throw new RegraNegocioException("O fim não pode ser anterior ao início");
     }
   }
 }

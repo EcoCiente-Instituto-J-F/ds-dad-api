@@ -11,5 +11,4 @@ public record Condominio(
     Integer tipoId,
     Integer sindicoId,
     Endereco endereco,
-    List<Torre> torres) {
-}
+    List<Torre> torres) {}

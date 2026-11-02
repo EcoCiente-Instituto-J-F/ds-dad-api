@@ -1,8 +1,18 @@
 package dad.core.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+import dad.core.domain.Aula;
+import dad.core.domain.Curso;
+import dad.core.exception.RecursoNaoEncontradoException;
+import dad.core.exception.RegraNegocioException;
+import dad.core.gateway.CursoGateway;
 import java.util.List;
 import java.util.Optional;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -11,150 +21,73 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import dad.core.domain.Aula;
-import dad.core.domain.Curso;
-import dad.core.exception.RecursoNaoEncontradoException;
-import dad.core.exception.RegraNegocioException;
-import dad.core.gateway.CursoGateway;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 class CursoServiceTest {
 
-    @Mock
-    private CursoGateway gateway;
+  @Mock private CursoGateway gateway;
 
-    @InjectMocks
-    private CursoService service;
+  @InjectMocks private CursoService service;
 
-    @Test
-    void deveBloquearTituloVazio() {
-        var curso = new Curso(
-            null,
-            " ",
-            "Descrição",
-            true,
-            List.of()
-        );
+  @Test
+  void deveBloquearTituloVazio() {
+    var curso = new Curso(null, " ", "Descrição", true, List.of());
 
-        assertThrows(
-            RegraNegocioException.class,
-            () -> service.criar(curso)
-        );
+    assertThrows(RegraNegocioException.class, () -> service.criar(curso));
 
-        verifyNoInteractions(gateway);
-    }
+    verifyNoInteractions(gateway);
+  }
 
-    @Test
-    void deveBloquearDescricaoVazia() {
-        var curso = new Curso(
-            null,
-            "Curso",
-            "",
-            true,
-            List.of()
-        );
+  @Test
+  void deveBloquearDescricaoVazia() {
+    var curso = new Curso(null, "Curso", "", true, List.of());
 
-        assertThrows(
-            RegraNegocioException.class,
-            () -> service.criar(curso)
-        );
+    assertThrows(RegraNegocioException.class, () -> service.criar(curso));
 
-        verifyNoInteractions(gateway);
-    }
+    verifyNoInteractions(gateway);
+  }
 
-    @Test
-    void deveBloquearAulaSemConteudo() {
-        var curso = new Curso(
-            null,
-            "Curso",
-            "Descrição",
-            true,
-            List.of(
-                new Aula(
-                    null,
-                    null,
-                    "Aula",
-                    " ",
-                    1
-                )
-            )
-        );
+  @Test
+  void deveBloquearAulaSemConteudo() {
+    var curso =
+        new Curso(null, "Curso", "Descrição", true, List.of(new Aula(null, null, "Aula", " ", 1)));
 
-        assertThrows(
-            RegraNegocioException.class,
-            () -> service.criar(curso)
-        );
+    assertThrows(RegraNegocioException.class, () -> service.criar(curso));
 
-        verifyNoInteractions(gateway);
-    }
+    verifyNoInteractions(gateway);
+  }
 
-    @Test
-    void deveBloquearListaDeAulasNula() {
-        var curso = new Curso(
-            null,
-            "Curso",
-            "Descrição",
-            true,
-            null
-        );
+  @Test
+  void deveBloquearListaDeAulasNula() {
+    var curso = new Curso(null, "Curso", "Descrição", true, null);
 
-        assertThrows(
-            RegraNegocioException.class,
-            () -> service.atualizar(curso)
-        );
+    assertThrows(RegraNegocioException.class, () -> service.atualizar(curso));
 
-        verifyNoInteractions(gateway);
-    }
+    verifyNoInteractions(gateway);
+  }
 
-    @Test
-    void devePermitirCursoSemAulas() {
-        var curso = new Curso(
-            null,
-            "Curso",
-            "Descrição",
-            true,
-            List.of()
-        );
+  @Test
+  void devePermitirCursoSemAulas() {
+    var curso = new Curso(null, "Curso", "Descrição", true, List.of());
 
-        when(gateway.criar(curso)).thenReturn(curso);
+    when(gateway.criar(curso)).thenReturn(curso);
 
-        assertEquals(
-            curso,
-            service.criar(curso)
-        );
+    assertEquals(curso, service.criar(curso));
 
-        verify(gateway).criar(curso);
-    }
+    verify(gateway).criar(curso);
+  }
 
-    @Test
-    void deveInformarCursoInexistente() {
-        when(gateway.buscarPorId(99))
-            .thenReturn(Optional.empty());
+  @Test
+  void deveInformarCursoInexistente() {
+    when(gateway.buscarPorId(99)).thenReturn(Optional.empty());
 
-        assertThrows(
-            RecursoNaoEncontradoException.class,
-            () -> service.buscar(99)
-        );
-    }
+    assertThrows(RecursoNaoEncontradoException.class, () -> service.buscar(99));
+  }
 
-    @ParameterizedTest
-    @CsvSource({
-        "-1, 20",
-        "0, 0",
-        "0, 101"
-    })
-    void deveBloquearPaginacaoInvalida(
-        int pagina,
-        int tamanho
-    ) {
-        assertThrows(
-            RegraNegocioException.class,
-            () -> service.listar("", pagina, tamanho)
-        );
+  @ParameterizedTest
+  @CsvSource({"-1, 20", "0, 0", "0, 101"})
+  void deveBloquearPaginacaoInvalida(int pagina, int tamanho) {
+    assertThrows(RegraNegocioException.class, () -> service.listar("", pagina, tamanho));
 
-        verifyNoInteractions(gateway);
-    }
+    verifyNoInteractions(gateway);
+  }
 }

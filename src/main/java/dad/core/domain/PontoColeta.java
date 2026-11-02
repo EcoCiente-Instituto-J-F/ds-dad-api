@@ -10,5 +10,4 @@ public record PontoColeta(
     LocalTime fechamento,
     boolean ativo,
     Endereco endereco,
-    List<Integer> categoriaIds) {
-}
+    List<Integer> categoriaIds) {}
