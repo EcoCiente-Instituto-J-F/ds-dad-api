@@ -92,6 +92,22 @@ public class ColetaGatewayImpl implements ColetaGateway {
         .orElseThrow(UsuarioNaoAutenticadoException::new);
     validarReferencias(criacao.dados());
     var entity = mapper.toNovaEntity(criacao);
+    var solicitanteId = criacao.solicitadoPorUsuarioId();
+
+    if (repository.representaLadoSolicitante(
+        solicitanteId, "CONDOMINIO",
+        entity.condominioId, entity.cooperativaId)) {
+      entity.origemSolicitacao = "CONDOMINIO";
+    } else if (repository.representaLadoSolicitante(
+        solicitanteId, "COOPERATIVA",
+        entity.condominioId, entity.cooperativaId)) {
+      entity.origemSolicitacao = "COOPERATIVA";
+    } else {
+      throw new RegraNegocioException(
+          "O usuário autenticado não representa o condomínio nem a cooperativa "
+              + "deste agendamento. O perfil Administrador, isoladamente, "
+              + "não autoriza a criação pelas regras do banco.");
+    }
     repository.saveAndFlush(entity);
     salvarDias(entity.id, criacao.dados());
     return toDomain(entity);
