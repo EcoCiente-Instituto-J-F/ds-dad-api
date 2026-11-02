@@ -17,6 +17,8 @@ public interface ColetaGateway {
 
   Optional<Coleta> buscarPorId(Integer id);
 
+  Coleta criar(Coleta.Criacao criacao);
+
   Coleta salvar(Integer id, Coleta.Dados dados);
 
   Coleta cancelar(Integer id);

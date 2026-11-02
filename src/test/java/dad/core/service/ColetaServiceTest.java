@@ -55,9 +55,10 @@ class ColetaServiceTest {
   void devePermitirAgendamentoSemDataFinal() {
     var dados = dados(false, List.of(), null);
 
-    service.salvar(null, dados);
+    var criacao = new Coleta.Criacao(dados, 17);
+    service.criar(criacao);
 
-    verify(gateway).salvar(null, dados);
+    verify(gateway).criar(criacao);
   }
 
   @Test
@@ -97,7 +98,7 @@ class ColetaServiceTest {
   }
 
   private void assertDadosInvalidos(Coleta.Dados dados) {
-    assertThrows(RegraNegocioException.class, () -> service.salvar(null, dados));
+    assertThrows(RegraNegocioException.class, () -> service.criar(new Coleta.Criacao(dados, 17)));
 
     verifyNoInteractions(gateway);
   }

@@ -2,6 +2,7 @@ package dad.entrypoint.exception;
 
 import dad.core.exception.RecursoNaoEncontradoException;
 import dad.core.exception.RegraNegocioException;
+import dad.core.exception.UsuarioNaoAutenticadoException;
 import dad.entrypoint.dto.response.ErroResponse;
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -15,6 +16,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+  @ExceptionHandler(UsuarioNaoAutenticadoException.class)
+  public ResponseEntity<ErroResponse> usuarioNaoAutenticado(UsuarioNaoAutenticadoException erro) {
+    return resposta(HttpStatus.UNAUTHORIZED, erro.getMessage(), Map.of());
+  }
 
   @ExceptionHandler(dad.core.exception.CamposInvalidosException.class)
   public ResponseEntity<ErroResponse> campos(dad.core.exception.CamposInvalidosException erro) {

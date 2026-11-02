@@ -15,6 +15,8 @@ public record Coleta(
     List<Integer> diasSemanaIds,
     List<Visita> visitas) {
 
+  public record Criacao(Dados dados, Integer solicitadoPorUsuarioId) {}
+
   public record Dados(
       Integer condominioId,
       Integer cooperativaId,
