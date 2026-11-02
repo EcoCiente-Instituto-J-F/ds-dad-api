@@ -4,7 +4,9 @@ import dad.core.domain.Coleta;
 import dad.core.domain.Pagina;
 import dad.core.exception.RecursoNaoEncontradoException;
 import dad.core.exception.RegraNegocioException;
+import dad.core.exception.UsuarioNaoAutenticadoException;
 import dad.core.gateway.ColetaGateway;
+import dad.core.regra.RegrasColeta;
 import dad.core.regra.RegrasPaginacao;
 import java.time.OffsetDateTime;
 import java.util.HashSet;
@@ -47,35 +49,16 @@ public class ColetaService {
         .orElseThrow(() -> new RecursoNaoEncontradoException("Agendamento não encontrado"));
   }
 
+  public Coleta criar(Coleta.Criacao criacao) {
+    if (criacao == null) throw new UsuarioNaoAutenticadoException();
+    RegrasColeta.exigirSolicitante(criacao.solicitadoPorUsuarioId());
+    validarDados(criacao.dados());
+    return gateway.criar(criacao);
+  }
+
   public Coleta salvar(Integer id, Coleta.Dados dados) {
-    if (dados.condominioId() == null
-        || dados.cooperativaId() == null
-        || dados.statusId() == null
-        || dados.dataInicio() == null) {
-      throw new RegraNegocioException("Informe condomínio, cooperativa, status e início");
-    }
-
-    validarPeriodo(dados.dataInicio(), dados.dataFim());
-
-    var dias = dados.diasSemanaIds();
-
-    if (dias == null || dias.stream().anyMatch(dia -> dia == null || dia <= 0) || dias.size() > 7) {
-      throw new RegraNegocioException("Lista de dias inválida");
-    }
-
-    if (new HashSet<>(dias).size() != dias.size()) {
-      throw new RegraNegocioException("Não informe dias repetidos");
-    }
-
-    if (dados.recorrente() && dias.isEmpty()) {
-      throw new RegraNegocioException("Informe os dias da recorrência");
-    }
-
-    if (!dados.recorrente() && !dias.isEmpty()) {
-      throw new RegraNegocioException(
-          "Agendamento sem recorrência deve enviar diasSemanaIds vazio");
-    }
-
+    if (id == null) throw new UsuarioNaoAutenticadoException();
+    validarDados(dados);
     return gateway.salvar(id, dados);
   }
 
@@ -103,6 +86,37 @@ public class ColetaService {
   private void validarPeriodo(OffsetDateTime inicio, OffsetDateTime fim) {
     if (inicio != null && fim != null && fim.isBefore(inicio)) {
       throw new RegraNegocioException("O fim não pode ser anterior ao início");
+    }
+  }
+
+  private void validarDados(Coleta.Dados dados) {
+    if (dados == null) throw new RegraNegocioException("Informe os dados do agendamento");
+    if (dados.condominioId() == null
+        || dados.cooperativaId() == null
+        || dados.statusId() == null
+        || dados.dataInicio() == null) {
+      throw new RegraNegocioException("Informe condomínio, cooperativa, status e início");
+    }
+
+    validarPeriodo(dados.dataInicio(), dados.dataFim());
+
+    var dias = dados.diasSemanaIds();
+
+    if (dias == null || dias.stream().anyMatch(dia -> dia == null || dia <= 0) || dias.size() > 7) {
+      throw new RegraNegocioException("Lista de dias inválida");
+    }
+
+    if (new HashSet<>(dias).size() != dias.size()) {
+      throw new RegraNegocioException("Não informe dias repetidos");
+    }
+
+    if (dados.recorrente() && dias.isEmpty()) {
+      throw new RegraNegocioException("Informe os dias da recorrência");
+    }
+
+    if (!dados.recorrente() && !dias.isEmpty()) {
+      throw new RegraNegocioException(
+          "Agendamento sem recorrência deve enviar diasSemanaIds vazio");
     }
   }
 }

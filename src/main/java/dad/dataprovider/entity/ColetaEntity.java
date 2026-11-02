@@ -17,6 +17,9 @@ public class ColetaEntity {
   @Column(name = "id_agendamento_coleta")
   public Integer id;
 
+  @Column(name = "solicitado_por_usuario_id", nullable = false, updatable = false)
+  public Integer solicitadoPorUsuarioId;
+
   @Column(name = "condominio_id")
   public Integer condominioId;
 

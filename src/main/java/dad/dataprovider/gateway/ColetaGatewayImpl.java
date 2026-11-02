@@ -4,6 +4,7 @@ import dad.core.domain.Coleta;
 import dad.core.domain.Pagina;
 import dad.core.exception.RecursoNaoEncontradoException;
 import dad.core.exception.RegraNegocioException;
+import dad.core.exception.UsuarioNaoAutenticadoException;
 import dad.core.gateway.ColetaGateway;
 import dad.core.regra.DiasSemana;
 import dad.core.regra.RegrasColeta;
@@ -13,6 +14,7 @@ import dad.dataprovider.mapper.ColetaPersistenceMapper;
 import dad.dataprovider.repository.ColetaRepository;
 import dad.dataprovider.repository.CondominioRepository;
 import dad.dataprovider.repository.CooperativaRepository;
+import dad.dataprovider.repository.UsuarioRepository;
 import dad.dataprovider.repository.VisitaColetaRepository;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
@@ -33,18 +35,21 @@ public class ColetaGatewayImpl implements ColetaGateway {
   private final CondominioRepository condominioRepository;
   private final CooperativaRepository cooperativaRepository;
   private final ColetaPersistenceMapper mapper;
+  private final UsuarioRepository usuarioRepository;
 
   public ColetaGatewayImpl(
       ColetaRepository repository,
       VisitaColetaRepository visitaRepository,
       CondominioRepository condominioRepository,
       CooperativaRepository cooperativaRepository,
-      ColetaPersistenceMapper mapper) {
+      ColetaPersistenceMapper mapper,
+      UsuarioRepository usuarioRepository) {
     this.repository = repository;
     this.visitaRepository = visitaRepository;
     this.condominioRepository = condominioRepository;
     this.cooperativaRepository = cooperativaRepository;
     this.mapper = mapper;
+    this.usuarioRepository = usuarioRepository;
   }
 
   @Override
@@ -78,8 +83,24 @@ public class ColetaGatewayImpl implements ColetaGateway {
   }
 
   @Override
+  public Coleta criar(Coleta.Criacao criacao) {
+    if (criacao == null) throw new UsuarioNaoAutenticadoException();
+    RegrasColeta.exigirSolicitante(criacao.solicitadoPorUsuarioId());
+    usuarioRepository
+        .buscarComBloqueio(criacao.solicitadoPorUsuarioId())
+        .filter(usuario -> usuario.ativo)
+        .orElseThrow(UsuarioNaoAutenticadoException::new);
+    validarReferencias(criacao.dados());
+    var entity = mapper.toNovaEntity(criacao);
+    repository.saveAndFlush(entity);
+    salvarDias(entity.id, criacao.dados());
+    return toDomain(entity);
+  }
+
+  @Override
   public Coleta salvar(Integer id, Coleta.Dados dados) {
-    var entity = id == null ? new ColetaEntity() : exigirComBloqueio(id);
+    if (id == null) throw new UsuarioNaoAutenticadoException();
+    var entity = exigirComBloqueio(id);
 
     boolean possuiVisitas = id != null && visitaRepository.countByColetaId(id) > 0;
 
@@ -101,11 +122,7 @@ public class ColetaGatewayImpl implements ColetaGateway {
 
     repository.saveAndFlush(entity);
 
-    repository.excluirDias(entity.id);
-
-    for (var diaId : dados.diasSemanaIds()) {
-      repository.inserirDia(entity.id, diaId);
-    }
+    salvarDias(entity.id, dados);
 
     return toDomain(entity);
   }
@@ -238,5 +255,10 @@ public class ColetaGatewayImpl implements ColetaGateway {
         entity.dataFim,
         entity.recorrente,
         repository.buscarDias(entity.id));
+  }
+
+  private void salvarDias(Integer id, Coleta.Dados dados) {
+    repository.excluirDias(id);
+    for (var diaId : dados.diasSemanaIds()) repository.inserirDia(id, diaId);
   }
 }

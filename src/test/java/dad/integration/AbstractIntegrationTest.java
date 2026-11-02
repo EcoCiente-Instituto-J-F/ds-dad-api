@@ -67,6 +67,18 @@ public abstract class AbstractIntegrationTest {
           var statement = connection.createStatement()) {
 
         statement.execute(schema);
+        // Reproduz no PostgreSQL isolado a coluna já obrigatória no banco da aplicação.
+        statement.execute(
+            """
+            ALTER TABLE tb_agendamentos_coletas
+            ADD COLUMN IF NOT EXISTS solicitado_por_usuario_id INTEGER NOT NULL
+              REFERENCES tb_usuarios(id_usuario)
+            """);
+        statement.execute(
+            """
+            ALTER TABLE tb_agendamentos_coletas
+            ALTER COLUMN solicitado_por_usuario_id SET NOT NULL
+            """);
       }
     } catch (Exception exception) {
       POSTGRES.stop();

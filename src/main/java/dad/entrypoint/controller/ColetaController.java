@@ -1,16 +1,21 @@
 package dad.entrypoint.controller;
 
+import dad.config.security.UsuarioAutenticado;
+import dad.core.domain.Coleta;
+import dad.core.exception.UsuarioNaoAutenticadoException;
 import dad.core.service.ColetaService;
 import dad.entrypoint.dto.request.ColetaRequest;
 import dad.entrypoint.dto.request.VisitaColetaRequest;
 import dad.entrypoint.dto.response.ColetaResponse;
 import dad.entrypoint.dto.response.PaginaResponse;
 import dad.entrypoint.mapper.ColetaMapper;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.time.OffsetDateTime;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -50,9 +55,21 @@ public class ColetaController {
     return mapper.toResponse(service.buscar(id));
   }
 
+  @Operation(
+      summary = "Cria um agendamento",
+      description =
+          "O solicitante é obtido do usuário autenticado e não pode ser enviado no JSON. Na edição, o solicitante original é preservado.")
   @PostMapping
-  public ResponseEntity<ColetaResponse> criar(@Valid @RequestBody ColetaRequest request) {
-    var coleta = service.salvar(null, mapper.toDomain(request));
+  public ResponseEntity<ColetaResponse> criar(
+      Authentication authentication, @Valid @RequestBody ColetaRequest request) {
+    if (authentication == null
+        || !authentication.isAuthenticated()
+        || !(authentication.getPrincipal() instanceof UsuarioAutenticado usuario)
+        || usuario.id() == null
+        || usuario.id() <= 0) {
+      throw new UsuarioNaoAutenticadoException();
+    }
+    var coleta = service.criar(new Coleta.Criacao(mapper.toDomain(request), usuario.id()));
 
     return ResponseEntity.created(URI.create("/api/admin/v1/coletas/" + coleta.id()))
         .body(mapper.toResponse(coleta));

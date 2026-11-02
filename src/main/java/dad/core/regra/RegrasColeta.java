@@ -2,6 +2,7 @@ package dad.core.regra;
 
 import dad.core.domain.Coleta;
 import dad.core.exception.RegraNegocioException;
+import dad.core.exception.UsuarioNaoAutenticadoException;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.HashSet;
@@ -9,6 +10,10 @@ import java.util.Objects;
 
 public final class RegrasColeta {
   private RegrasColeta() {}
+
+  public static void exigirSolicitante(Integer usuarioId) {
+    if (usuarioId == null || usuarioId <= 0) throw new UsuarioNaoAutenticadoException();
+  }
 
   private static final ZoneId ZONA = ZoneId.of("America/Sao_Paulo");
 

@@ -34,6 +34,13 @@ public class ColetaPersistenceMapper {
         entity.observacao);
   }
 
+  public ColetaEntity toNovaEntity(Coleta.Criacao criacao) {
+    var entity = new ColetaEntity();
+    atualizar(entity, criacao.dados());
+    entity.solicitadoPorUsuarioId = criacao.solicitadoPorUsuarioId();
+    return entity;
+  }
+
   public void atualizar(ColetaEntity entity, Coleta.Dados dados) {
     entity.condominioId = dados.condominioId();
     entity.cooperativaId = dados.cooperativaId();
