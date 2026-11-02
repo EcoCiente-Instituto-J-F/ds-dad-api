@@ -37,8 +37,4 @@ public class ColetaEntity {
 
   @Column(name = "possui_recorrencia")
   public boolean recorrente;
-
-  @jakarta.persistence.Column(
-      name = "origem_solicitacao", nullable = false, updatable = false)
-  public String origemSolicitacao;
 }

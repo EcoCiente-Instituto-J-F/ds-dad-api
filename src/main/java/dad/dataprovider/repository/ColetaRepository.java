@@ -117,17 +117,4 @@ public interface ColetaRepository extends JpaRepository<ColetaEntity, Integer> {
       """,
       nativeQuery = true)
   int inserirDia(@Param("coletaId") Integer coletaId, @Param("diaId") Integer diaId);
-
-  @Query(
-      value = """
-          SELECT public.fn_usuario_representa_lado(
-              :usuarioId, CAST(:lado AS varchar),
-              :condominioId, :cooperativaId)
-          """,
-      nativeQuery = true)
-  boolean representaLadoSolicitante(
-      @Param("usuarioId") Integer usuarioId,
-      @Param("lado") String lado,
-      @Param("condominioId") Integer condominioId,
-      @Param("cooperativaId") Integer cooperativaId);
 }
