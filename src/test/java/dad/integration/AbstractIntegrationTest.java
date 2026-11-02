@@ -232,21 +232,23 @@ public abstract class AbstractIntegrationTest {
             inserirEndereco());
 
     cooperativaId =
-        id(
-            """
+    id(
+        """
         INSERT INTO tb_cooperativas (
             nome_cooperativa,
             cnpj_cooperativa,
             email_cooperativa,
+            usuario_id,
             endereco_id
         )
-        VALUES (?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?)
         RETURNING id_cooperativa
         """,
-            "Cooperativa Base",
-            "11444777000161",
-            "base@cooperativa.com",
-            inserirEndereco());
+        "Cooperativa Base",
+        "11444777000161",
+        "base@cooperativa.com",
+        adminId,
+        inserirEndereco());
 
     tokenAdmin = token(adminId, ADMIN_EMAIL, "ADMIN");
   }
