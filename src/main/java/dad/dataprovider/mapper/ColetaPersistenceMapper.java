@@ -1,21 +1,16 @@
 package dad.dataprovider.mapper;
 
-import java.util.List;
-
-import org.springframework.stereotype.Component;
-
 import dad.core.domain.Coleta;
 import dad.dataprovider.entity.ColetaEntity;
 import dad.dataprovider.entity.VisitaEntity;
+import java.util.List;
+import org.springframework.stereotype.Component;
 
 @Component
 public class ColetaPersistenceMapper {
 
   public Coleta toDomain(
-      ColetaEntity entity,
-      String status,
-      List<Integer> dias,
-      List<VisitaEntity> visitas) {
+      ColetaEntity entity, String status, List<Integer> dias, List<VisitaEntity> visitas) {
     return new Coleta(
         entity.id,
         entity.condominioId,
@@ -26,9 +21,7 @@ public class ColetaPersistenceMapper {
         entity.dataFim,
         entity.recorrente,
         dias,
-        visitas.stream()
-            .map(this::toDomain)
-            .toList());
+        visitas.stream().map(this::toDomain).toList());
   }
 
   public Coleta.Visita toDomain(VisitaEntity entity) {
@@ -41,9 +34,7 @@ public class ColetaPersistenceMapper {
         entity.observacao);
   }
 
-  public void atualizar(
-      ColetaEntity entity,
-      Coleta.Dados dados) {
+  public void atualizar(ColetaEntity entity, Coleta.Dados dados) {
     entity.condominioId = dados.condominioId();
     entity.cooperativaId = dados.cooperativaId();
     entity.statusId = dados.statusId();

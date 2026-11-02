@@ -1,17 +1,12 @@
 package dad.core.gateway;
 
-import java.util.Optional;
-
 import dad.core.domain.Condominio;
 import dad.core.domain.Pagina;
+import java.util.Optional;
 
 public interface CondominioGateway {
 
-  Pagina<Condominio> listar(
-      String busca,
-      Boolean ativo,
-      int pagina,
-      int tamanho);
+  Pagina<Condominio> listar(String busca, Boolean ativo, int pagina, int tamanho);
 
   Optional<Condominio> buscarPorId(Integer id);
 
@@ -19,7 +14,5 @@ public interface CondominioGateway {
 
   Condominio atualizar(Condominio condominio);
 
-  Condominio alterarStatus(
-      Integer id,
-      boolean ativo);
+  Condominio alterarStatus(Integer id, boolean ativo);
 }

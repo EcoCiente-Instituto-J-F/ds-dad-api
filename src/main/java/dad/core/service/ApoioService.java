@@ -1,11 +1,10 @@
 package dad.core.service;
 
-import org.springframework.stereotype.Service;
-
 import dad.core.domain.Catalogos;
 import dad.core.domain.Dashboard;
 import dad.core.exception.RegraNegocioException;
 import dad.core.gateway.ApoioGateway;
+import org.springframework.stereotype.Service;
 
 @Service
 public class ApoioService {
@@ -18,8 +17,7 @@ public class ApoioService {
 
   public Dashboard buscarDashboard(int meses) {
     if (meses < 1 || meses > 24) {
-      throw new RegraNegocioException(
-          "Informe um período entre 1 e 24 meses");
+      throw new RegraNegocioException("Informe um período entre 1 e 24 meses");
     }
 
     return gateway.buscarDashboard(meses);

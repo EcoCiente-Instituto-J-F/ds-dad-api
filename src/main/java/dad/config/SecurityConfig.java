@@ -1,8 +1,11 @@
 package dad.config;
 
+import dad.config.security.JwtAuthenticationFilter;
+import dad.config.security.JwtService;
+import dad.config.security.SecurityExceptionHandler;
+import dad.config.security.UsuarioJwtService;
 import java.util.Arrays;
 import java.util.List;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,11 +20,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import dad.config.security.JwtAuthenticationFilter;
-import dad.config.security.JwtService;
-import dad.config.security.SecurityExceptionHandler;
-import dad.config.security.UsuarioJwtService;
-
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -32,54 +30,41 @@ public class SecurityConfig {
       JwtService jwtService,
       UsuarioJwtService usuarioService,
       SecurityExceptionHandler exceptionHandler,
-      CorsConfigurationSource corsConfigurationSource) throws Exception {
+      CorsConfigurationSource corsConfigurationSource)
+      throws Exception {
 
-    var jwtFilter = new JwtAuthenticationFilter(
-        jwtService,
-        usuarioService,
-        exceptionHandler);
+    var jwtFilter = new JwtAuthenticationFilter(jwtService, usuarioService, exceptionHandler);
 
-    return http
-        .csrf(AbstractHttpConfigurer::disable)
+    return http.csrf(AbstractHttpConfigurer::disable)
         .httpBasic(AbstractHttpConfigurer::disable)
         .formLogin(AbstractHttpConfigurer::disable)
         .logout(AbstractHttpConfigurer::disable)
         .requestCache(AbstractHttpConfigurer::disable)
-
-        .cors(cors -> cors.configurationSource(
-            corsConfigurationSource))
-
-        .sessionManagement(session -> session.sessionCreationPolicy(
-            SessionCreationPolicy.STATELESS))
-
-        .exceptionHandling(exceptions -> exceptions
-            .authenticationEntryPoint(exceptionHandler)
-            .accessDeniedHandler(exceptionHandler))
-
-        .authorizeHttpRequests(authorize -> authorize
-            .requestMatchers(
-                HttpMethod.OPTIONS,
-                "/**")
-            .permitAll()
-
-            .requestMatchers(
-                "/swagger-ui.html",
-                "/swagger-ui/**",
-                "/v3/api-docs",
-                "/v3/api-docs/**",
-                "/error")
-            .permitAll()
-
-            .requestMatchers(
-                "/api/admin/v1/**")
-            .hasRole("ADMIN")
-
-            .anyRequest().denyAll())
-
-        .addFilterBefore(
-            jwtFilter,
-            UsernamePasswordAuthenticationFilter.class)
-
+        .cors(cors -> cors.configurationSource(corsConfigurationSource))
+        .sessionManagement(
+            session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .exceptionHandling(
+            exceptions ->
+                exceptions
+                    .authenticationEntryPoint(exceptionHandler)
+                    .accessDeniedHandler(exceptionHandler))
+        .authorizeHttpRequests(
+            authorize ->
+                authorize
+                    .requestMatchers(HttpMethod.OPTIONS, "/**")
+                    .permitAll()
+                    .requestMatchers(
+                        "/swagger-ui.html",
+                        "/swagger-ui/**",
+                        "/v3/api-docs",
+                        "/v3/api-docs/**",
+                        "/error")
+                    .permitAll()
+                    .requestMatchers("/api/admin/v1/**")
+                    .hasRole("ADMIN")
+                    .anyRequest()
+                    .denyAll())
+        .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
         .build();
   }
 
@@ -94,32 +79,18 @@ public class SecurityConfig {
             .filter(origem -> !origem.isEmpty())
             .toList());
 
-    configuration.setAllowedMethods(
-        List.of(
-            "GET",
-            "POST",
-            "PUT",
-            "PATCH",
-            "DELETE",
-            "OPTIONS"));
+    configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 
-    configuration.setAllowedHeaders(
-        List.of(
-            "Authorization",
-            "Content-Type",
-            "Accept"));
+    configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
 
-    configuration.setExposedHeaders(
-        List.of("Location"));
+    configuration.setExposedHeaders(List.of("Location"));
 
     configuration.setAllowCredentials(false);
     configuration.setMaxAge(3600L);
 
     var source = new UrlBasedCorsConfigurationSource();
 
-    source.registerCorsConfiguration(
-        "/**",
-        configuration);
+    source.registerCorsConfiguration("/**", configuration);
 
     return source;
   }

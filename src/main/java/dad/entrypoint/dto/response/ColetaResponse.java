@@ -21,6 +21,5 @@ public record ColetaResponse(
       boolean realizada,
       boolean confirmada,
       OffsetDateTime confirmadoEm,
-      String observacao) {
-  }
+      String observacao) {}
 }

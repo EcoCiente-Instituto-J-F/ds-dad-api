@@ -1,11 +1,9 @@
 package dad.dataprovider.repository;
 
+import jakarta.persistence.EntityManager;
 import java.time.OffsetDateTime;
 import java.util.List;
-
 import org.springframework.stereotype.Repository;
-
-import jakarta.persistence.EntityManager;
 
 @Repository
 public class ApoioRepository {
@@ -16,11 +14,11 @@ public class ApoioRepository {
     this.entityManager = entityManager;
   }
 
-  public Object[] buscarTotais(
-      OffsetDateTime inicioHoje,
-      OffsetDateTime agora) {
-    return (Object[]) entityManager
-        .createNativeQuery("""
+  public Object[] buscarTotais(OffsetDateTime inicioHoje, OffsetDateTime agora) {
+    return (Object[])
+        entityManager
+            .createNativeQuery(
+                """
             SELECT
                 (SELECT COUNT(*) FROM tb_usuarios),
 
@@ -63,17 +61,16 @@ public class ApoioRepository {
                       AND data_postagem < :agora
                 )
             """)
-        .setParameter("inicioHoje", inicioHoje)
-        .setParameter("agora", agora)
-        .getSingleResult();
+            .setParameter("inicioHoje", inicioHoje)
+            .setParameter("agora", agora)
+            .getSingleResult();
   }
 
   @SuppressWarnings("unchecked")
-  public List<Object[]> buscarEvolucao(
-      OffsetDateTime inicio,
-      OffsetDateTime fim) {
+  public List<Object[]> buscarEvolucao(OffsetDateTime inicio, OffsetDateTime fim) {
     return entityManager
-        .createNativeQuery("""
+        .createNativeQuery(
+            """
             SELECT
                 mes,
                 SUM(usuarios),
@@ -137,7 +134,8 @@ public class ApoioRepository {
   @SuppressWarnings("unchecked")
   public List<Object[]> buscarUsuariosRecentes() {
     return entityManager
-        .createNativeQuery("""
+        .createNativeQuery(
+            """
             SELECT
                 u.id_usuario,
                 u.nome_usuario,
@@ -157,7 +155,8 @@ public class ApoioRepository {
   }
 
   public List<Object[]> buscarTiposUsuarios() {
-    return consultar("""
+    return consultar(
+        """
         SELECT id_tipo_usuario, nome_tipo
         FROM tb_lkp_tipos_usuarios
         ORDER BY nome_tipo, id_tipo_usuario
@@ -165,7 +164,8 @@ public class ApoioRepository {
   }
 
   public List<Object[]> buscarTiposCondominios() {
-    return consultar("""
+    return consultar(
+        """
         SELECT id_tipo_condominio, nome_tipo
         FROM tb_lkp_tipos_condominios
         ORDER BY nome_tipo, id_tipo_condominio
@@ -173,7 +173,8 @@ public class ApoioRepository {
   }
 
   public List<Object[]> buscarCategorias() {
-    return consultar("""
+    return consultar(
+        """
         SELECT
             id_categoria,
             nome_categoria,
@@ -187,7 +188,8 @@ public class ApoioRepository {
   }
 
   public List<Object[]> buscarDiasSemana() {
-    return consultar("""
+    return consultar(
+        """
         SELECT id_dia_semana, nome_dia
         FROM tb_lkp_dias_semanas
         ORDER BY id_dia_semana
@@ -195,7 +197,8 @@ public class ApoioRepository {
   }
 
   public List<Object[]> buscarStatusAgendamentos() {
-    return consultar("""
+    return consultar(
+        """
         SELECT id_status, nome_status
         FROM tb_lkp_status_agendamentos
         ORDER BY nome_status, id_status
@@ -203,7 +206,8 @@ public class ApoioRepository {
   }
 
   public List<Object[]> buscarSindicos() {
-    return consultar("""
+    return consultar(
+        """
         SELECT
             s.id_sindico,
             u.id_usuario,
@@ -218,8 +222,6 @@ public class ApoioRepository {
 
   @SuppressWarnings("unchecked")
   private List<Object[]> consultar(String sql) {
-    return entityManager
-        .createNativeQuery(sql)
-        .getResultList();
+    return entityManager.createNativeQuery(sql).getResultList();
   }
 }

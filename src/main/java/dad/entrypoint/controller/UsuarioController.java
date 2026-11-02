@@ -1,10 +1,5 @@
 package dad.entrypoint.controller;
 
-import java.net.URI;
-
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import dad.core.service.UsuarioService;
 import dad.entrypoint.dto.request.StatusRequest;
 import dad.entrypoint.dto.request.UsuarioCriarRequest;
@@ -13,6 +8,16 @@ import dad.entrypoint.dto.response.PaginaResponse;
 import dad.entrypoint.dto.response.UsuarioResponse;
 import dad.entrypoint.mapper.UsuarioMapper;
 import jakarta.validation.Valid;
+import java.net.URI;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/admin/v1/usuarios")
@@ -21,9 +26,7 @@ public class UsuarioController {
   private final UsuarioService service;
   private final UsuarioMapper mapper;
 
-  public UsuarioController(
-      UsuarioService service,
-      UsuarioMapper mapper) {
+  public UsuarioController(UsuarioService service, UsuarioMapper mapper) {
     this.service = service;
     this.mapper = mapper;
   }
@@ -35,51 +38,31 @@ public class UsuarioController {
       @RequestParam(required = false) Integer tipoUsuarioId,
       @RequestParam(defaultValue = "0") int pagina,
       @RequestParam(defaultValue = "20") int tamanho) {
-    return mapper.toResponse(
-        service.listar(
-            busca,
-            ativo,
-            tipoUsuarioId,
-            pagina,
-            tamanho));
+    return mapper.toResponse(service.listar(busca, ativo, tipoUsuarioId, pagina, tamanho));
   }
 
   @GetMapping("/{id}")
-  public UsuarioResponse buscar(
-      @PathVariable Integer id) {
-    return mapper.toResponse(
-        service.buscar(id));
+  public UsuarioResponse buscar(@PathVariable Integer id) {
+    return mapper.toResponse(service.buscar(id));
   }
 
   @PostMapping
-  public ResponseEntity<UsuarioResponse> criar(
-      @Valid @RequestBody UsuarioCriarRequest request) {
-    var usuario = service.criar(
-        mapper.toDomain(request));
+  public ResponseEntity<UsuarioResponse> criar(@Valid @RequestBody UsuarioCriarRequest request) {
+    var usuario = service.criar(mapper.toDomain(request));
 
-    return ResponseEntity
-        .created(URI.create(
-            "/api/admin/v1/usuarios/" + usuario.id()))
+    return ResponseEntity.created(URI.create("/api/admin/v1/usuarios/" + usuario.id()))
         .body(mapper.toResponse(usuario));
   }
 
   @PatchMapping("/{id}")
   public UsuarioResponse atualizar(
-      @PathVariable Integer id,
-      @Valid @RequestBody UsuarioEditarRequest request) {
-    return mapper.toResponse(
-        service.atualizar(
-            id,
-            mapper.toDomain(request)));
+      @PathVariable Integer id, @Valid @RequestBody UsuarioEditarRequest request) {
+    return mapper.toResponse(service.atualizar(id, mapper.toDomain(request)));
   }
 
   @PatchMapping("/{id}/status")
   public UsuarioResponse alterarStatus(
-      @PathVariable Integer id,
-      @Valid @RequestBody StatusRequest request) {
-    return mapper.toResponse(
-        service.alterarStatus(
-            id,
-            request.ativo()));
+      @PathVariable Integer id, @Valid @RequestBody StatusRequest request) {
+    return mapper.toResponse(service.alterarStatus(id, request.ativo()));
   }
 }

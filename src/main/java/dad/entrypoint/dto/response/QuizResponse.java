@@ -13,20 +13,21 @@ public record QuizResponse(
     Integer pontos,
     boolean ativo,
     OffsetDateTime criadoEm,
-    List<PerguntaResponse> perguntas) {
+    List<PerguntaResponse> perguntas,
+    @io.swagger.v3.oas.annotations.media.Schema(
+            description = "Indica histórico de tentativas e bloqueio da estrutura.")
+        boolean possuiTentativas,
+    @io.swagger.v3.oas.annotations.media.Schema(
+            description = "Quantidade de tentativas, inclusive não finalizadas.")
+        long totalTentativas) {
 
   public record PerguntaResponse(
       Integer id,
       Integer quizId,
       String enunciado,
       Integer ordem,
-      List<AlternativaResponse> alternativas) {
-  }
+      List<AlternativaResponse> alternativas) {}
 
   public record AlternativaResponse(
-      Integer id,
-      Integer perguntaId,
-      String texto,
-      boolean correta) {
-  }
+      Integer id, Integer perguntaId, String texto, boolean correta) {}
 }

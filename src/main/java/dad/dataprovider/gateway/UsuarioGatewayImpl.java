@@ -1,16 +1,5 @@
 package dad.dataprovider.gateway;
 
-import java.text.Normalizer;
-import java.util.Locale;
-import java.util.Objects;
-import java.util.Optional;
-
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
-
 import dad.core.domain.CriarUsuario;
 import dad.core.domain.EditarUsuario;
 import dad.core.domain.Endereco;
@@ -19,12 +8,20 @@ import dad.core.domain.Usuario;
 import dad.core.exception.RecursoNaoEncontradoException;
 import dad.core.exception.RegraNegocioException;
 import dad.core.gateway.UsuarioGateway;
+import dad.core.regra.RegrasUsuario;
 import dad.dataprovider.entity.EnderecoEntity;
 import dad.dataprovider.entity.UsuarioEntity;
 import dad.dataprovider.mapper.UsuarioPersistenceMapper;
 import dad.dataprovider.repository.CondominioRepository;
 import dad.dataprovider.repository.EnderecoRepository;
 import dad.dataprovider.repository.UsuarioRepository;
+import java.util.Objects;
+import java.util.Optional;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @Transactional
@@ -52,28 +49,29 @@ public class UsuarioGatewayImpl implements UsuarioGateway {
   @Override
   @Transactional(readOnly = true)
   public Pagina<Usuario> listar(
-      String busca,
-      Boolean ativo,
-      Integer tipoUsuarioId,
-      int pagina,
-      int tamanho) {
-    var pageable = PageRequest.of(
-        pagina,
-        tamanho,
-        Sort.by("nome").ascending()
-            .and(Sort.by("id").ascending()));
+      String busca, Boolean ativo, Integer tipoUsuarioId, int pagina, int tamanho) {
+    var pageable =
+        PageRequest.of(pagina, tamanho, Sort.by("nome").ascending().and(Sort.by("id").ascending()));
 
-    var resultado = repository.buscar(
-        busca == null ? "" : busca.trim(),
-        ativo,
-        tipoUsuarioId,
-        pageable);
+    var administradores =
+        tipoUsuarioId == null
+            ? java.util.List.<Integer>of()
+            : repository.buscarIdsAdministradores();
+    boolean filtrarAdministradores =
+        tipoUsuarioId != null && administradores.contains(tipoUsuarioId);
+    var resultado =
+        filtrarAdministradores
+            ? repository.buscar(
+                busca == null ? "" : busca.trim(),
+                ativo,
+                tipoUsuarioId,
+                administradores,
+                true,
+                pageable)
+            : repository.buscar(busca == null ? "" : busca.trim(), ativo, tipoUsuarioId, pageable);
 
     return new Pagina<>(
-        resultado.getContent()
-            .stream()
-            .map(this::toDomain)
-            .toList(),
+        resultado.getContent().stream().map(this::toDomain).toList(),
         resultado.getNumber(),
         resultado.getSize(),
         resultado.getTotalElements(),
@@ -83,8 +81,7 @@ public class UsuarioGatewayImpl implements UsuarioGateway {
   @Override
   @Transactional(readOnly = true)
   public Optional<Usuario> buscarPorId(Integer id) {
-    return repository.findById(id)
-        .map(this::toDomain);
+    return repository.findById(id).map(this::toDomain);
   }
 
   @Override
@@ -93,32 +90,21 @@ public class UsuarioGatewayImpl implements UsuarioGateway {
 
     validarEmail(comando.email(), 0);
 
-    if (comando.cpf() != null
-        && repository.existsByCpf(comando.cpf())) {
-      throw new RegraNegocioException(
-          "CPF já cadastrado");
-    }
+    RegrasUsuario.validarCpf(comando.cpf() != null && repository.existsByCpf(comando.cpf()));
 
-    String tipo = buscarTipo(
-        comando.tipoUsuarioId());
+    String tipo = buscarTipo(comando.tipoUsuarioId());
 
-    String codigoTipo = normalizarTipo(tipo);
+    String codigoTipo = RegrasUsuario.normalizarTipo(tipo);
 
     if (codigoTipo.equals("MORADOR")) {
       validarCondominio(comando.condominioId());
-    } else if (comando.condominioId() != null) {
-      throw new RegraNegocioException(
-          "Condomínio no cadastro é exclusivo do morador");
+    } else {
+      RegrasUsuario.validarSemCondominio(comando.condominioId());
     }
 
-    Integer enderecoId = salvarEndereco(
-        null,
-        comando.endereco());
+    Integer enderecoId = salvarEndereco(null, comando.endereco());
 
-    var entity = mapper.toNovaEntity(
-        comando,
-        passwordEncoder.encode(comando.senha()),
-        enderecoId);
+    var entity = mapper.toNovaEntity(comando, passwordEncoder.encode(comando.senha()), enderecoId);
 
     repository.saveAndFlush(entity);
 
@@ -127,28 +113,22 @@ public class UsuarioGatewayImpl implements UsuarioGateway {
     }
 
     if (codigoTipo.equals("MORADOR")) {
-      Integer nivelId = repository
-          .buscarNivelInicial()
-          .orElseThrow(() -> new RegraNegocioException(
-              "Nível morador_comum não encontrado no banco"));
+      Integer nivelId =
+          repository
+              .buscarNivelInicial()
+              .orElseThrow(
+                  () -> new RegraNegocioException("Nível morador_comum não encontrado no banco"));
 
-      repository.inserirMorador(
-          entity.id,
-          comando.condominioId());
+      repository.inserirMorador(entity.id, comando.condominioId());
 
-      repository.inserirVinculoMorador(
-          entity.id,
-          comando.condominioId(),
-          nivelId);
+      repository.inserirVinculoMorador(entity.id, comando.condominioId(), nivelId);
     }
 
     return toDomain(entity);
   }
 
   @Override
-  public Usuario atualizar(
-      Integer id,
-      EditarUsuario comando) {
+  public Usuario atualizar(Integer id, EditarUsuario comando) {
     repository.bloquearEscritas();
 
     var entity = exigirComBloqueio(id);
@@ -157,9 +137,7 @@ public class UsuarioGatewayImpl implements UsuarioGateway {
 
     mapper.atualizar(entity, comando);
 
-    entity.enderecoId = salvarEndereco(
-        entity.enderecoId,
-        comando.endereco());
+    entity.enderecoId = salvarEndereco(entity.enderecoId, comando.endereco());
 
     repository.flush();
 
@@ -167,9 +145,7 @@ public class UsuarioGatewayImpl implements UsuarioGateway {
   }
 
   @Override
-  public Usuario alterarStatus(
-      Integer id,
-      boolean ativo) {
+  public Usuario alterarStatus(Integer id, boolean ativo) {
     repository.bloquearEscritas();
 
     var entity = exigirComBloqueio(id);
@@ -182,84 +158,57 @@ public class UsuarioGatewayImpl implements UsuarioGateway {
   }
 
   private UsuarioEntity exigirComBloqueio(Integer id) {
-    return repository.buscarComBloqueio(id)
-        .orElseThrow(() -> new RecursoNaoEncontradoException(
-            "Usuário não encontrado"));
+    return repository
+        .buscarComBloqueio(id)
+        .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado"));
   }
 
-  private void validarEmail(
-      String email,
-      Integer ignorarId) {
-    if (repository.existeEmail(email, ignorarId)) {
-      throw new RegraNegocioException(
-          "E-mail já cadastrado");
-    }
+  private void validarEmail(String email, Integer ignorarId) {
+    RegrasUsuario.validarEmail(repository.existeEmail(email, ignorarId));
   }
 
   private String buscarTipo(Integer tipoId) {
-    return repository.buscarNomeTipo(tipoId)
-        .orElseThrow(() -> new RegraNegocioException(
-            "Tipo de usuário não encontrado"));
+    return repository
+        .buscarNomeTipo(tipoId)
+        .orElseThrow(() -> new RegraNegocioException("Tipo de usuário não encontrado"));
   }
 
   private void validarCondominio(Integer id) {
-    if (id == null) {
-      throw new RegraNegocioException(
-          "Informe o condomínio do morador");
-    }
+    RegrasUsuario.exigirCondominio(id);
 
-    var condominio = condominioRepository
-        .buscarComBloqueio(id)
-        .orElseThrow(() -> new RecursoNaoEncontradoException(
-            "Condomínio não encontrado"));
+    var condominio =
+        condominioRepository
+            .buscarComBloqueio(id)
+            .orElseThrow(() -> new RecursoNaoEncontradoException("Condomínio não encontrado"));
 
-    if (!condominio.ativo) {
-      throw new RegraNegocioException(
-          "O condomínio está inativo");
-    }
+    RegrasUsuario.validarCondominioAtivo(condominio.ativo);
   }
 
   private Usuario toDomain(UsuarioEntity entity) {
-    var endereco = buscarEndereco(
-        entity.enderecoId);
+    var endereco = buscarEndereco(entity.enderecoId);
 
     return mapper.toDomain(
         entity,
         endereco,
         buscarTipo(entity.tipoUsuarioId),
-        repository.buscarCondominioMorador(entity.id)
-            .orElse(null));
+        repository.buscarCondominioMorador(entity.id).orElse(null));
   }
 
   private EnderecoEntity buscarEndereco(Integer id) {
-    return enderecoRepository.findById(id)
-        .orElseThrow(() -> new RecursoNaoEncontradoException(
-            "Endereço do usuário não encontrado"));
+    return enderecoRepository
+        .findById(id)
+        .orElseThrow(() -> new RecursoNaoEncontradoException("Endereço do usuário não encontrado"));
   }
 
-  private Integer salvarEndereco(
-      Integer enderecoId,
-      Endereco endereco) {
+  private Integer salvarEndereco(Integer enderecoId, Endereco endereco) {
     if (enderecoId != null) {
       var atual = buscarEndereco(enderecoId);
 
-      if (Objects.equals(
-          mapper.toDomain(atual),
-          endereco)) {
+      if (Objects.equals(mapper.toDomain(atual), endereco)) {
         return enderecoId;
       }
     }
 
-    return enderecoRepository
-        .saveAndFlush(mapper.toEntity(endereco)).id;
-  }
-
-  private String normalizarTipo(String tipo) {
-    return Normalizer
-        .normalize(tipo, Normalizer.Form.NFD)
-        .replaceAll("\\p{M}", "")
-        .trim()
-        .toUpperCase(Locale.ROOT)
-        .replaceAll("[\\s-]+", "_");
+    return enderecoRepository.saveAndFlush(mapper.toEntity(endereco)).id;
   }
 }

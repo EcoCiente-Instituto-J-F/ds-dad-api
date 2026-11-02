@@ -23,6 +23,5 @@ public record CooperativaResponse(
       LocalTime fechamento,
       boolean ativo,
       EnderecoResponse endereco,
-      List<Integer> categoriaIds) {
-  }
+      List<Integer> categoriaIds) {}
 }

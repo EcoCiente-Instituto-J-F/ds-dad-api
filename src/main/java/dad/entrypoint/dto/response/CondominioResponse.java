@@ -13,8 +13,5 @@ public record CondominioResponse(
     EnderecoResponse endereco,
     List<TorreResponse> torres) {
 
-  public record TorreResponse(
-      Integer id,
-      String nome) {
-  }
+  public record TorreResponse(Integer id, String nome) {}
 }

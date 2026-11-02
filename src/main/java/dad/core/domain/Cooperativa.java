@@ -13,5 +13,4 @@ public record Cooperativa(
     OffsetDateTime criadoEm,
     Endereco endereco,
     List<Integer> categoriaIds,
-    List<PontoColeta> pontos) {
-}
+    List<PontoColeta> pontos) {}

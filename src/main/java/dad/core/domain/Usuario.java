@@ -15,5 +15,4 @@ public record Usuario(
     String avatar,
     OffsetDateTime registroEm,
     Endereco endereco,
-    Integer condominioId) {
-}
+    Integer condominioId) {}

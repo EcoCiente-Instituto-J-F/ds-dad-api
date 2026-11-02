@@ -1,19 +1,15 @@
 package dad.dataprovider.mapper;
 
+import dad.core.domain.Catalogos;
+import dad.core.domain.Dashboard;
+import dad.core.regra.DiasSemana;
 import java.sql.Timestamp;
-import java.text.Normalizer;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.List;
-import java.util.Locale;
-
 import org.springframework.stereotype.Component;
-
-import dad.core.domain.Catalogos;
-import dad.core.domain.Dashboard;
-import dad.core.exception.RegraNegocioException;
 
 @Component
 public class ApoioPersistenceMapper {
@@ -22,7 +18,8 @@ public class ApoioPersistenceMapper {
       OffsetDateTime agora,
       Object[] totais,
       List<Dashboard.Mes> evolucao,
-      List<Object[]> usuariosRecentes) {
+      List<Object[]> usuariosRecentes,
+      long coletasHoje) {
     return new Dashboard(
         agora,
         numero(totais[0]),
@@ -35,28 +32,20 @@ public class ApoioPersistenceMapper {
         numero(totais[7]),
         numero(totais[8]),
         numero(totais[9]),
+        coletasHoje,
         evolucao,
-        usuariosRecentes.stream()
-            .map(this::toUsuarioRecente)
-            .toList());
+        usuariosRecentes.stream().map(this::toUsuarioRecente).toList());
   }
 
   public Dashboard.Mes toMes(Object[] linha) {
-    return new Dashboard.Mes(
-        texto(linha[0]),
-        numero(linha[1]),
-        numero(linha[2]),
-        numero(linha[3]));
+    return new Dashboard.Mes(texto(linha[0]), numero(linha[1]), numero(linha[2]), numero(linha[3]));
   }
 
   public Catalogos.Opcao toOpcao(Object[] linha) {
-    return new Catalogos.Opcao(
-        inteiro(linha[0]),
-        texto(linha[1]));
+    return new Catalogos.Opcao(inteiro(linha[0]), texto(linha[1]));
   }
 
-  public Catalogos.Categoria toCategoria(
-      Object[] linha) {
+  public Catalogos.Categoria toCategoria(Object[] linha) {
     return new Catalogos.Categoria(
         inteiro(linha[0]),
         texto(linha[1]),
@@ -69,21 +58,14 @@ public class ApoioPersistenceMapper {
   public Catalogos.DiaSemana toDia(Object[] linha) {
     String nome = texto(linha[1]);
 
-    return new Catalogos.DiaSemana(
-        inteiro(linha[0]),
-        nome,
-        numeroDia(nome));
+    return new Catalogos.DiaSemana(inteiro(linha[0]), nome, numeroDia(nome));
   }
 
   public Catalogos.Sindico toSindico(Object[] linha) {
-    return new Catalogos.Sindico(
-        inteiro(linha[0]),
-        inteiro(linha[1]),
-        texto(linha[2]));
+    return new Catalogos.Sindico(inteiro(linha[0]), inteiro(linha[1]), texto(linha[2]));
   }
 
-  private Dashboard.UsuarioRecente toUsuarioRecente(
-      Object[] linha) {
+  private Dashboard.UsuarioRecente toUsuarioRecente(Object[] linha) {
     return new Dashboard.UsuarioRecente(
         inteiro(linha[0]),
         texto(linha[1]),
@@ -94,34 +76,7 @@ public class ApoioPersistenceMapper {
   }
 
   private Integer numeroDia(String nome) {
-    String normalizado = Normalizer
-        .normalize(nome, Normalizer.Form.NFD)
-        .replaceAll("\\p{M}", "")
-        .trim()
-        .toUpperCase(Locale.ROOT);
-
-    return switch (normalizado) {
-      case "DOMINGO" -> 0;
-      case "SEGUNDA", "SEGUNDA-FEIRA",
-          "SEGUNDA_FEIRA" ->
-        1;
-      case "TERCA", "TERCA-FEIRA",
-          "TERCA_FEIRA" ->
-        2;
-      case "QUARTA", "QUARTA-FEIRA",
-          "QUARTA_FEIRA" ->
-        3;
-      case "QUINTA", "QUINTA-FEIRA",
-          "QUINTA_FEIRA" ->
-        4;
-      case "SEXTA", "SEXTA-FEIRA",
-          "SEXTA_FEIRA" ->
-        5;
-      case "SABADO" -> 6;
-      default -> throw new RegraNegocioException(
-          "Nome de dia não reconhecido no catálogo: "
-              + nome);
-    };
+    return DiasSemana.diaDaSemana(nome).getValue() % 7;
   }
 
   private long numero(Object valor) {
@@ -129,9 +84,7 @@ public class ApoioPersistenceMapper {
   }
 
   private Integer inteiro(Object valor) {
-    return valor == null
-        ? null
-        : ((Number) valor).intValue();
+    return valor == null ? null : ((Number) valor).intValue();
   }
 
   private String texto(Object valor) {
@@ -148,15 +101,13 @@ public class ApoioPersistenceMapper {
     }
 
     if (valor instanceof Timestamp timestamp) {
-      return timestamp.toInstant()
-          .atOffset(ZoneOffset.UTC);
+      return timestamp.toInstant().atOffset(ZoneOffset.UTC);
     }
 
     if (valor instanceof ZonedDateTime data) {
       return data.toOffsetDateTime();
     }
 
-    throw new IllegalStateException(
-        "Tipo de data não suportado pelo driver");
+    throw new IllegalStateException("Tipo de data não suportado pelo driver");
   }
 }

@@ -1,15 +1,13 @@
 package dad.dataprovider.mapper;
 
-import java.util.List;
-
-import org.springframework.stereotype.Component;
-
 import dad.core.domain.Cooperativa;
 import dad.core.domain.Endereco;
 import dad.core.domain.PontoColeta;
 import dad.dataprovider.entity.CooperativaEntity;
 import dad.dataprovider.entity.EnderecoEntity;
 import dad.dataprovider.entity.PontoEntity;
+import java.util.List;
+import org.springframework.stereotype.Component;
 
 @Component
 public class CooperativaPersistenceMapper {
@@ -20,12 +18,7 @@ public class CooperativaPersistenceMapper {
     }
 
     return new Endereco(
-        entity.cep,
-        entity.uf,
-        entity.cidade,
-        entity.logradouro,
-        entity.numero,
-        entity.complemento);
+        entity.cep, entity.uf, entity.cidade, entity.logradouro, entity.numero, entity.complemento);
   }
 
   public Cooperativa toDomain(
@@ -47,9 +40,7 @@ public class CooperativaPersistenceMapper {
   }
 
   public PontoColeta toDomain(
-      PontoEntity entity,
-      EnderecoEntity endereco,
-      List<Integer> categorias) {
+      PontoEntity entity, EnderecoEntity endereco, List<Integer> categorias) {
     return new PontoColeta(
         entity.id,
         entity.nome,
@@ -60,9 +51,7 @@ public class CooperativaPersistenceMapper {
         categorias);
   }
 
-  public void atualizar(
-      CooperativaEntity entity,
-      Cooperativa cooperativa) {
+  public void atualizar(CooperativaEntity entity, Cooperativa cooperativa) {
     entity.nome = cooperativa.nome();
     entity.cnpj = cooperativa.cnpj();
     entity.email = cooperativa.email();
@@ -70,10 +59,7 @@ public class CooperativaPersistenceMapper {
     entity.usuarioId = cooperativa.usuarioId();
   }
 
-  public void atualizar(
-      PontoEntity entity,
-      PontoColeta ponto,
-      Integer cooperativaId) {
+  public void atualizar(PontoEntity entity, PontoColeta ponto, Integer cooperativaId) {
     entity.nome = ponto.nome();
     entity.abertura = ponto.abertura();
     entity.fechamento = ponto.fechamento();
